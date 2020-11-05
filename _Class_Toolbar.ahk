@@ -760,6 +760,8 @@ class Toolbar { ; extends Toolbar.Private {
             
         } Else If (ctl.Name = "Cancel") {
             this.ClearButtons()
+            For i, b in this.btnsReset
+                this.btnsReset[A_Index].icon -= 1
             this.Add(this.btnsReset,false)
             ctl.gui.Destroy()
         } Else If (ctl.Name = "OK") {
@@ -777,10 +779,6 @@ class Toolbar { ; extends Toolbar.Private {
             this.SendMsg(this._DeleteButton, r-1)
             btns := this.SaveNewLayout()
             LV.Delete(r)
-            ; For i, b in btns {
-                ; c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
-                ; LV.Add("Icon" b.icon c, (b.label) ? b.label : "Seperator")
-            ; }
         } Else If (ctl.Name = "CustoList") {
             item := p[1], checked := p.Has(2) ? p[2] : "" 
             this.HideButton(item,!checked)
@@ -812,9 +810,8 @@ class Toolbar { ; extends Toolbar.Private {
         r := []
         For i, btn in a {
             b := {}
-            For prop, value in btn {
-                b.%prop% := value
-            }
+            For prop, value in btn
+                (prop = "icon") ? b.%prop% := value-1 : b.%prop% := value
             r.InsertAt(A_Index,b)
         }
         this.Add(r,false)
