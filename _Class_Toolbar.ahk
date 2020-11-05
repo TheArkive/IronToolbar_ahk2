@@ -1,1226 +1,848 @@
-﻿;=======================================================================================
-;
-;                    Class Toolbar
-;
-; Author:            Pulover [Rodolfo U. Batista]
-; AHK version:       1.1.23.01
-;
-;                    Class for AutoHotkey Toolbar custom controls
+﻿; AHK v2 32-bit
 ;=======================================================================================
-;
-; This class provides intuitive methods to work with Toolbar controls created via
-;    Gui, Add, Custom, ClassToolbarWindow32.
-;
-; Note: It's recommended to call any method only after Gui, Show. Adding or modifying
-;     buttons of a toolbar in a Gui that is not yet visible might fail eventually.
-;
+; Class Toolbar (ClassToolbarWindow32)
+; based on Class Toolbar by Pulover [Rodolfo U. Batista] for AHK v1.1.23.01 (https://github.com/Pulover/Class_Toolbar)
+; Microsoft Docs Reference: https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-toolbar-control-reference
 ;=======================================================================================
-;
-; Toolbar Methods:
-;    Add([Options, Label1[=Text]:Icon[(Options)], Label2[=Text]:Icon[(Options)]...])
-;    AutoSize()
-;    Customize()
-;    Delete(Button)
-;    Export()
-;    Get([HotItem, TextRows, Rows, BtnWidth, BtnHeight, Style, ExStyle])
-;    GetButton(Button [, ID, Text, State, Style, Icon, Label, Index])
-;    GetButtonPos(Button [, OutX, OutY, OutW, OutH])
-;    GetButtonState(Button, StateQuerry)
-;    GetCount()
-;    GetHiddenButtons()
-;    Insert(Position [, Options, Label1[=Text]:Icon[(Options)], Label2[=Text]:Icon[(Options)]...])
-;    LabelToIndex(Label)
-;    ModifyButton(Button, State [, Set])
-;    ModifyButtonInfo(Button, Property, Value)
-;    MoveButton(Button, Target)
-;    OnMessage(CommandID)
-;    OnNotify(Param [, MenuXPos, MenuYPos, Label, ID, AllowCustom])
-;    Reset()
-;    SetButtonSize(W, H)
-;    SetDefault([Options, Label1[=Text]:Icon[(Options)], Label2[=Text]:Icon[(Options)]...])
-;    SetExStyle(Style)
-;    SetHotItem(Button)
-;    SetImageList(IL_Default [, IL_Hot, IL_Pressed, IL_Disabled])
-;    SetIndent(Value)
-;    SetListGap(Value)
-;    SetMaxTextRows([MaxRows])
-;    SetPadding(X, Y)
-;    SetRows([Rows, AddMore])
-;    ToggleStyle(Style)
-;
-; Presets Methods:
-;    Presets.Delete(Slot)
-;    Presets.Export(Slot, [ArrayOut])
-;    Presets.Import(Slot, [Options, Label1[=Text]:Icon, Label2[=Text]:Icon, Label3[=Text]:Icon...])
-;    Presets.Load(Slot)
-;    Presets.Save(Slot, Buttons)
-;
+; Example
 ;=======================================================================================
-;
-; Useful Toolbar Styles:   Styles can be applied to Gui command options, e.g.:
-;                              Gui, Add, Custom, ClassToolbarWindow32 0x0800 0x0100
-;
-; TBSTYLE_FLAT      := 0x0800 - Shows separators as bars.
-; TBSTYLE_LIST      := 0x1000 - Shows buttons text on their side.
-; TBSTYLE_TOOLTIPS  := 0x0100 - Shows buttons text as tooltips.
-; CCS_ADJUSTABLE    := 0x0020 - Allows customization by double-click and shift-drag.
-; CCS_NODIVIDER     := 0x0040 - Removes the separator line above the toolbar.
-; CCS_NOPARENTALIGN := 0x0008 - Allows positioning and moving toolbars.
-; CCS_NORESIZE      := 0x0004 - Allows resizing toolbars.
-; CCS_VERT          := 0x0080 - Creates a vertical toolbar (add WRAP to button options).
-;
-;=======================================================================================
-Class Toolbar extends Toolbar.Private {
-;=======================================================================================
-;    Method:             Add
-;    Description:        Add button(s) to the end the toolbar. The Buttons parameters
-;                            sets target Label, text caption and icon index for each
-;                            button. If not a valid label name, a function name can be
-;                            used instead.
-;                        To add a separator call this method without parameters.
-;                        Prepend any non letter or digit symbol, such as "-" or "*"
-;                            to the label to add a hidden button. Hidden buttons won't
-;                            be visible when Gui is shown but will still be available
-;                            in the customize window. E.g.: "-Label=New:1", "*Label:2".
-;    Parameters:
-;        Options:        Enter zero or more words, separated by space or tab, from the
-;                            following list to set buttons' initial states and styles:
-;                            Checked, Ellipses, Enabled, Hidden, Indeterminate, Marked,
-;                            Pressed, Wrap, Button, Sep, Check, Group, CheckGroup,
-;                            Dropdown, AutoSize, NoPrefix, ShowText, WholeDropdown.
-;                        You can also set the minimum and maximum button width,
-;                            for example W20-100 would set min to 20 and max to 100.
-;                        This option affects all buttons in the toolbar when added or
-;                            inserted but does not prevent modifying button sizes.
-;                        If this parameter is blank it defaults to "Enabled", otherwise
-;                            you must set this parameter to enable buttons.
-;                        You may pass integer values that correspond to (a combination of)
-;                            button styles. You cannot set states this way (it will always
-;                            be set to "Enabled").
-;        Buttons:        Buttons can be added in the following format: Label=Text:1,
-;                            where "Label" is the target label to execute when the
-;                            button is pressed, "Text" is caption to be displayed
-;                            with the button or as a Tooltip if the toolbar has the
-;                            TBSTYLE_TOOLTIPS style (this parameter can be omitted) and
-;                            "1" can be any numeric value that represents the icon index
-;                            in the ImageList (0 means no icon).
-;                        You can include specific states and styles for a button appending
-;                            them inside parenthesis after the icon. E.g.:
-;                            "Label=Text:3(Enabled Dropdown)". This option can also be
-;                            an Integer value, in this case the general options are
-;                            ignored for that button.
-;                        To add a separator between buttons specify "" or equivalent.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    Add(Options := "Enabled", Buttons*) {
-        If (!Buttons.Length())
-        {
-            Struct := this.BtnSep(TBBUTTON, Options), this.DefaultBtnInfo.Push(Struct)
-            SendMessage, this.TB_ADDBUTTONS, 1, &TBBUTTON,, % "ahk_id " this.tbHwnd
-            If (ErrorLevel = "FAIL")
-                return False
-        }
-        Else If (Options = "")
-            Options := "Enabled"
-        For each, Button in Buttons
-        {
-            If !(this.SendMessage(Button, Options, this.TB_ADDBUTTONS, 1))
-                return False
-        }
-        this.AutoSize()
-        return true
-    }
-;=======================================================================================
-;    Method:             AutoSize
-;    Description:        Auto-sizes toolbar.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    AutoSize() {
-        PostMessage, this.TB_AUTOSIZE, 0, 0,, % "ahk_id " this.tbHwnd
-        return ErrorLevel ? False : true
-    }
-;=======================================================================================
-;    Method:             Customize
-;    Description:        Displays the Customize Toolbar dialog box.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    Customize() {
-        SendMessage, this.TB_CUSTOMIZE, 0, 0,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             Delete
-;    Description:        Delete one or all buttons.
-;    Parameters:
-;        Button:         1-based index of the button. If omitted deletes all buttons.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    Delete(Button := "") {
-        If (!Button)
-        {
-            Loop, % this.GetCount()
-                this.Delete(1)
-        }
-        Else
-            SendMessage, this.TB_DELETEBUTTON, Button-1, 0,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             Export()
-;    Description:        Returns a text string with current buttons and order in Add and
-;                            Insert methods compatible format (this includes button's
-;                            styles but not states). Duplicate labels are ignored.
-;    Parameters:
-;        ArrayOut:       Set to TRUE to return an object array. The returned object
-;                            format is compatible with Presets.Save and Presets.Load
-;                            methods, which can be used to save and load layout presets.
-;    HidMark:            Changes the default symbol to prepend to hidden buttons.
-;    Return:             A text string with current buttons information to be exported.
-;=======================================================================================
-    Export(ArrayOut := False, HidMark := "-") {
-        BtnArray := [], IncLabels := ":"
-        Loop, % this.GetCount()
-        {
-            this.GetButton(A_Index, ID, Text, State, Style, Icon)
-        ,   Label := this.Labels[ID], IncLabels .= Label ":"
-        ,   cString := (Label ? (Label (Text ? "=" Text : "")
-                    .    ":" Icon (Style ? "(" Style ")" : "")) : "") ", "
-        ,   BtnString .= cString
-            If (ArrayOut)
-                BtnArray.Push({Icon: Icon-1, ID: ID, State: State
-                                , Style: Style, Text: Text, Label: Label})
-        }
-        For i, Button in this.DefaultBtnInfo
-        {
-            If (!InStr(IncLabels, ":" (Label := this.Labels[Button.ID]) ":"))
-            {
-                If (!Label)
-                    continue
-                oString := Label (Button.Text ? "=" Button.Text : "")
-                        .    ":" Button.Icon+1 (Button.Style ? "(" Button.Style ")" : "")
-                BtnString .= HidMark oString ", "
-            }
-        }
-        return ArrayOut ? BtnArray : RTrim(BtnString, ", ")
-    }
-;=======================================================================================
-;    Method:             Get
-;    Description:        Retrieves information from the toolbar.
-;    Parameters:
-;        HotItem:        OutputVar to store the 1-based index of current HotItem.
-;        TextRows:       OutputVar to store the number of text rows
-;        Rows:           OutputVar to store the number of rows for vertical toolbars.
-;        BtnWidth:       OutputVar to store the buttons' width in pixels.
-;        BtnHeight:      OutputVar to store the buttons' heigth in pixels.
-;        Style:          OutputVar to store the current styles numeric value.
-;        ExStyle:        OutputVar to store the current extended styles numeric value.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    Get(ByRef HotItem := "", ByRef TextRows := "", ByRef Rows := ""
-    ,   ByRef BtnWidth := "", ByRef BtnHeight := "", ByRef Style := "", ByRef ExStyle := "") {
-        SendMessage, this.TB_GETHOTITEM, 0, 0,, % "ahk_id " this.tbHwnd
-            HotItem := (ErrorLevel = 4294967295) ? 0 : ErrorLevel+1
-        SendMessage, this.TB_GETTEXTROWS, 0, 0,, % "ahk_id " this.tbHwnd
-            TextRows := ErrorLevel
-        SendMessage, this.TB_GETROWS, 0, 0,, % "ahk_id " this.tbHwnd
-            Rows := ErrorLevel
-        SendMessage, this.TB_GETBUTTONSIZE, 0, 0,, % "ahk_id " this.tbHwnd
-            this.MakeShort(ErrorLevel, BtnWidth, BtnHeight)
-        SendMessage, this.TB_GETSTYLE, 0, 0,, % "ahk_id " this.tbHwnd
-            Style := ErrorLevel
-        SendMessage, this.TB_GETEXTENDEDSTYLE, 0, 0,, % "ahk_id " this.tbHwnd
-            ExStyle := ErrorLevel
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             GetButton
-;    Description:        Retrieves information from the toolbar buttons.
-;    Parameters:
-;        Button:         1-based index of the button.
-;        ID:             OutputVar to store the button's command ID.
-;        Text:           OutputVar to store the button's text caption.
-;        State:          OutputVar to store the button's state numeric value.
-;        Style:          OutputVar to store the button's style numeric value.
-;        Icon:           OutputVar to store the button's icon index.
-;        Label:          OutputVar to store the button's associated script label or function.
-;        Index:          OutputVar to store the button's text string index.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    GetButton(Button, ByRef ID := "", ByRef Text := "", ByRef State := "", ByRef Style := ""
-    ,   ByRef Icon := "", ByRef Label := "", ByRef Index := "") {
-        VarSetCapacity(BtnVar, 8 + (A_PtrSize * 3), 0)
-        SendMessage, this.TB_GETBUTTON, Button-1, &BtnVar,, % "ahk_id " this.tbHwnd
-        ID := NumGet(&BtnVar, 4, "Int"), Icon := NumGet(&BtnVar, 0, "Int")+1
-    ,   State := NumGet(&BtnVar, 8, "Char"), Style := NumGet(&BtnVar, 9, "Char")
-    ,   Index := NumGet(&BtnVar, 8 + (A_PtrSize * 2), "Int"), Label := this.Labels[ID]
-        SendMessage, this.TB_GETBUTTONTEXT, ID, 0,, % "ahk_id " this.tbHwnd
-        VarSetCapacity(Buffer, ErrorLevel * (A_IsUnicode ? 2 : 1), 0)
-        SendMessage, this.TB_GETBUTTONTEXT, ID, &Buffer,, % "ahk_id " this.tbHwnd
-        Text := StrGet(&Buffer)
-        return (ErrorLevel = "FAIL") ? False : true
-        ; Alternative way to retrieve the button state.
-        ; SendMessage, this.TB_GETSTATE, ID, 0,, % "ahk_id " this.tbHwnd
-        ; State := ErrorLevel
-    }
-;=======================================================================================
-;    Method:             GetButtonPos
-;    Description:        Retrieves position and size of a specific button, relative to
-;                            the toolbar control.
-;    Parameters:
-;        Button:         1-based index of the button.
-;        OutX:           OutputVar to store the button's horizontal position.
-;        OutY:           OutputVar to store the button's vertical position.
-;        OutW:           OutputVar to store the button's width.
-;        OutH:           OutputVar to store the button's height.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    GetButtonPos(Button, ByRef OutX := "", ByRef OutY := "", ByRef OutW := "", ByRef OutH := "") {
-        this.GetButton(Button, BtnID), VarSetCapacity(RECT, 16, 0)
-        SendMessage, this.TB_GETRECT, BtnID, &RECT,, % "ahk_id " this.tbHwnd
-        OutX := NumGet(&RECT, 0, "Int"), OutY := NumGet(&RECT, 4, "Int")
-    ,   OutW := NumGet(&RECT, 8, "Int") - OutX, OutH := NumGet(&RECT, 12, "Int") - OutY
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             GetButtonState
-;    Description:        Retrieves the state of a button based on a querry.
-;    Parameters:
-;        StateQuerry:    Enter one of the following words to get the state of the button:
-;                            Checked, Enabled, Hidden, Highlighted, Indeterminate, Pressed.
-;    Return:             The TRUE if the StateQuerry is true, FALSE if it's not.
-;=======================================================================================
-    GetButtonState(Button, StateQuerry) {
-        this.GetButton(Button, BtnID)
-        If (this[ "TB_ISBUTTON" StateQuerry] )
-            Msg := this[ "TB_ISBUTTON" StateQuerry ]
-        SendMessage, Msg, BtnID, 0,, % "ahk_id " this.tbHwnd
-        return ErrorLevel ? true : False
-    }
-;=======================================================================================
-;    Method:             GetCount
-;    Description:        Retrieves the total number of buttons.
-;    Return:             The total number of buttons in the toolbar.
-;=======================================================================================
-    GetCount() {
-        SendMessage, this.TB_BUTTONCOUNT, 0, 0,, % "ahk_id " this.tbHwnd
-        return ErrorLevel
-    }
-;=======================================================================================
-;    Method:             GetHiddenButtons
-;    Description:        Retrieves which buttons are hidden when the toolbar size is 
-;                            smaller then the total size of the buttons it has.
-;                        This method is most useful when the toolbar is a child window of
-;                            a Rebar control, in order to show a menu when the chevron is
-;                            pushed. It does not retrieve buttons hidden by gui size.
-;    Return:             An array with all buttons hidden by the Rebar band. Each key
-;                            in the array has 4 properties: ID, Text, Label and Icon.
-;=======================================================================================
-    GetHiddenButtons() {
-        ControlGetPos,,, tbWidth,,, % "ahk_id " this.tbHwnd
-        VarSetCapacity(RECT, 16, 0), HiddenButtons := []
-        Loop, % this.GetCount()
-        {
-            SendMessage, this.TB_GETITEMRECT, A_Index-1, &RECT,, % "ahk_id " this.tbHwnd
-            If (NumGet(&RECT, 8, "Int") > tbWidth)
-                this.GetButton(A_Index, ID, Text, "", "", Icon)
-            ,   HiddenButtons.Push({ID: ID, Text: Text, Label: this.Labels[ID], Icon: Icon})
-        }
-        return HiddenButtons
-    }
-;=======================================================================================
-;    Method:             Insert
-;    Description:        Insert button(s) in specified postion.
-;                        To insert a separator call this method without parameters.
-;    Parameters:
-;        Position:       1-based index of button position to insert the new buttons.
-;        Options:        Same as Add().
-;        Buttons:        Same as Add().
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    Insert(Position, Options := "Enabled", Buttons*) {
-        If (!Buttons.Length())
-        {
-            this.BtnSep(TBBUTTON, Options)
-            SendMessage, this.TB_INSERTBUTTON, Position-1, &TBBUTTON,, % "ahk_id " this.tbHwnd
-            If (ErrorLevel = "FAIL")
-                return False
-        }
-        Else If (Options = "")
-            Options := "Enabled"
-        For i, Button in Buttons
-        {
-            If !(this.SendMessage(Button, Options, this.TB_INSERTBUTTON, (Position-1)+(i-1)))
-                return False
-        }
-        return true
-    }
-;=======================================================================================
-;    Method:             LabelToIndex
-;    Description:        Converts a button label to its index in a toolbar.
-;    Parameters:
-;        Label:          Button's associated label or function.
-;    Return:             The 1-based index for the button or FALSE if Label is invalid.
-;=======================================================================================
-    LabelToIndex(Label) {
-        For ID, L in this.Labels
-        {
-            If (L = Label)
-            {
-                SendMessage, this.TB_COMMANDTOINDEX, ID, 0,, % "ahk_id " this.tbHwnd
-                return ErrorLevel+1
-            }
-        }
-        return False
-    }
-;=======================================================================================
-;    Method:             ModifyButton
-;    Description:        Sets button states.
-;    Parameters:
-;        Button:         1-based index of the button.
-;        State:          Enter one word from the follwing list to change a button's
-;                            state: Check, Enable, Hide, Mark, Press.
-;        Set:            Enter TRUE or FALSE to set the state on/off.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    ModifyButton(Button, State, Set := true) {
-        If State not in CHECK,ENABLE,HIDE,MARK,PRESS
-            return False
-        Message := this[ "TB_" State "BUTTON"]
-    ,   this.GetButton(Button, BtnID)
-        SendMessage, Message, BtnID, Set,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             ModifyButtonInfo
-;    Description:        Sets button parameters such as Icon and CommandID.
-;    Parameters:
-;        Button:         1-based index of the button.
-;        Property:       Enter one word from the following list to select the Property
-;                            to be set: Command, Image, Size, State, Style, Text, Label.
-;        Value:          The value to be set in the selected Property.
-;                            If Property is State or Style you can enter named values as
-;                            in the Add options.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    ModifyButtonInfo(Button, Property, Value) {
-        If (Property = "Label")
-        {
-            this.GetButton(Button, ID), this.Labels[ID] := Value
-            return true
-        }
-        If (Property = "State") || (Property = "Style")
-        {
-            If Value is Integer
-                Value := Value
-            Else
-            {
-                Loop, Parse, Value, %A_Space%%A_Tab%
-                {
-                    If (this[ "TBSTATE_" A_LoopField ])
-                        tbState += this[ "TBSTATE_" A_LoopField ]
-                    Else If (this[ "BTNS_" A_LoopField ] )
-                        tbStyle += this[ "BTNS_" A_LoopField ]
-                }
-                Value := tb%Property%
-            }
-        }
-        If (Property = "Command")
-            this.GetButton(Button, "", "", "", "", "", Label), this.Labels[Value] := Label
-        this.DefineBtnInfoStruct(TBBUTTONINFO, Property, Value)
-    ,   this.GetButton(Button, BtnID)
-        SendMessage, this.TB_SETBUTTONINFO, BtnID, &TBBUTTONINFO,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             MoveButton
-;    Description:        Moves a toolbar button (change order).
-;    Parameters:
-;        Button:         1-based index of the button to be moved.
-;        Target:         1-based index of the new position.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    MoveButton(Button, Target) {
-        SendMessage, this.TB_MOVEBUTTON, Button-1, Target-1,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             OnMessage
-;    Description:        Run label associated with button's Command identifier.
-;                        This method should be called from a function monitoring the
-;                            WM_COMMAND message. Pass the wParam as the CommandID.
-;    Parameters:
-;        CommandID:      Command ID associated with the button. This is send via
-;                            WM_COMMAND message, you must pass the wParam from
-;                            inside a function that monitors this message.
-;        FuncParams:     In case the button is associated with a valid function,
-;                            you may pass optional parameters for the function call.
-;                            You can pass any number of parameters.
-;    Return:             TRUE if target label or function exists, or FALSE otherwise.
-;=======================================================================================
-    OnMessage(CommandID, FuncParams*) {
-        If (IsLabel(this.Labels[CommandID]))
-        {
-            GoSub, % this.Labels[CommandID]
-            return true
-        }
-		Else If (IsFunc(this.Labels[CommandID]))
-		{
-			BtnFunc := this.Labels[CommandID]
-		,	%BtnFunc%(FuncParams*)
-			return true
-		}
-        Else
-            return False
-    }
-;=======================================================================================
-;    Method:             OnNotify
-;    Description:        Handles toolbar notifications.
-;                        This method should be called from a function monitoring the
-;                            WM_NOTIFY message. Pass the lParam as the Param.
-;                            The returned value should be used as return value for
-;                            the monitoring function as well.
-;    Parameters:
-;        Param:          The lParam from WM_NOTIFY message.
-;        MenuXPos:       OutputVar to store the horizontal position for a menu.
-;        MenuYPos:       OutputVar to store the vertical position for a menu.
-;        BtnLabel:       OutputVar to store the label or function name associated with the button.
-;        ID:             OutputVar to store the button's Command ID.
-;        AllowCustom:    Set to FALSE to prevent customization of toolbars.
-;        AllowReset:     Set to FALSE to prevent Reset button from restoring original buttons.
-;        HideHelp:       Set to FALSE to show the Help button in the customize dialog.
-;    Return:             The required return value for the function monitoring
-;                            the the WM_NOTIFY message.
-;=======================================================================================
-    OnNotify(ByRef Param, ByRef MenuXPos := "", ByRef MenuYPos := "", ByRef BtnLabel := "", ByRef ID := ""
-    ,   AllowCustom := true, AllowReset := true, HideHelp := true) {
-        nCode  := NumGet(Param + (A_PtrSize * 2), 0, "Int"), tbHwnd := NumGet(Param + 0, 0, "UPtr")
-        If (tbHwnd != this.tbHwnd)
-            return ""
-        If (nCode = this.TBN_DROPDOWN)
-        {
-            ID  := NumGet(Param + (A_PtrSize * 3), 0, "Int"), BtnLabel := this.Labels[ID]
-        ,   VarSetCapacity(RECT, 16, 0)
-            SendMessage, this.TB_GETRECT, ID, &RECT,, % "ahk_id " this.tbHwnd
-            ControlGetPos, TBX, TBY,,,, % "ahk_id " this.tbHwnd
-            MenuXPos := TBX + NumGet(&RECT, 0, "Int"), MenuYPos := TBY + NumGet(&RECT, 12, "Int")
-            return False
-        }
-        Else
-            BtnLabel := "", ID := ""
-        If (nCode = this.TBN_QUERYINSERT) {
-            iItem := NumGet(Param + (A_PtrSize * 3),"Int")
-            iImg  := NumGet(Param + (A_PtrSize * 3)+4,"Int")
-            DebugMsg("Query Insert =================> " iItem " / icon: " iImg)
+#Include TheArkive_Debug.ahk
+#Include _JXON.ahk
 
+Global g := "", tb := "", ILA_big, ILA_small
+
+g := Gui.New("","Toolbar Test"), g.OnEvent("close","GuiClose")
+tb := Toolbar.New(g,"vMyToolbar","Tooltips Flat DrawDDArrows Adjustable") ; Flat Tooltips Adjustable Wrapable Vert NoParentAlign NoResize
+tb.IL_Create("big",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130"],true) ; name, InitialCount, images array, large
+tb.IL_Create("small",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130"])
+tb.SetImageList("big")
+; tb.easyMode := false ; this is pretty advanced, use only if you dare!
+
+g.Add("Button","x100 y70 w100 vTop","Top").OnEvent("click","guiEvents")
+g.Add("Button","xp y+0 w50 vLeft","Left").OnEvent("click","guiEvents")
+g.Add("Button","x+0 w50 vRight","Right").OnEvent("click","guiEvents")
+g.Add("Button","xp-50 y+0 w100 vBottom","Bottom").OnEvent("click","guiEvents")
+g.Add("Button","y+10 w100 vCustomize","Old Customizer").OnEvent("click","guiEvents")
+g.Add("Button","y+0 w100 vCustomizer","Customizer").OnEvent("click","guiEvents")
+g.Add("Button","y+10 w100 vExIm","Export / Import").OnEvent("click","guiEvents")
+
+g.Add("Button","x+20 y70 w50 vMove Section","Move").OnEvent("click","guiEvents")
+g.Add("Text","x+2 yp+4","From:")
+g.Add("Edit","x+2 yp-4 w30 Center vMoveFrom","2")
+g.Add("Text","x+2 yp+4","To:")
+g.Add("Edit","x+2 yp-4 w30 Center vMoveTo","3")
+
+g.Add("Button","xs y+2 w80 vShowText Section","Show Text").OnEvent("click","guiEvents")
+g.Add("Button","x+0 w80 vHideText","Hide Text").OnEvent("click","guiEvents")
+
+g.Add("Button","xs y+0 w80 vSmallIcons","Small Icons").OnEvent("click","guiEvents")
+g.Add("Button","x+0 w80 vLargeIcons","Large Icons").OnEvent("click","guiEvents")
+
+g.Add("Button","xs y+0 w65 vHide","Hide").OnEvent("click","guiEvents")
+g.Add("Button","x+0 w65 vShow","Show").OnEvent("click","guiEvents")
+g.Add("Edit","x+0 w30 vHideNum Center",5)
+
+g.Add("Button","xs y+0 w65 vEnable","Enable").OnEvent("click","guiEvents")
+g.Add("Button","x+0 w65 vDisable","Disable").OnEvent("click","guiEvents")
+g.Add("Edit","x+0 w30 vEnableNum Center",4)
+
+g.Add("Text","x100 y+60","Numbers indicate positions of`r`nbuttons/separators (not zero-based).")
+
+e := g.Add("Edit","x100 y+10 h150 w280 vEdit ReadOnly")
+e.SetFont("","Consolas")
+
+g.Show("w500 h500")
+
+tb.Add([{label:"Button 1", icon:1}
+       ,{label:""}
+       ,{label:"Button 2", icon:2}
+       ,{label:"Button 3", icon:3}
+       ,{label:"Button 4", icon:4, styles:"DropDown"}])
+
+
+; d props: {event:str, eventInt:int                                             ; event data
+        ; , index:int, idCmd:int, label:str, dims:{x:int, y:int, w:int, h:int}  ; data for clicked/hovered button | old: rect:{t:"", b:"", r:"", l:""}
+        ; , hoverFlags:str, hoverFlagsInt:int                                   ; more specific hover data
+        ; , vKey:int, char:int                                                  ; when hovering + keystroke, these are populated
+        ; , oldIndex:int, oldIdCmd:int, oldLabel:str}                           ; for initially dragged button, or previous hot item
+           
+; events: LClick, LDClick, LDown, RClick, RDClick   ; mouse click events
+        ; Char, KeyDown                             ; hover + keystroke events
+        ; BeginDrag, DragOut, EndDrag, DragOver     ; drag/drop events
+        ; DropDown                                  ; clicking drop-down arrow (on separated drop-down button)
+        ; DeletingButton                            ; delete button event
+        ; HotItemChange                             ; hover events
+        ;
+        ; NOTE: I have yet to get the DragOver event to actually fire.
+        ;
+        ; - These events fire but do not currently populate data in dataObj.
+        ; CustomDraw, DupAccelerator, GetDispInfo, GetObject, GetTipInfo, MapAccelerator, ReleasedCapture, ToolTipsCreated, WrapAccelerator, WrapHotItem
+
+; See Static wm_n member for a full list of events.
+tbEvent(tb, lParam, dataObj) {
+    char := (dataObj.char > 0) ? Chr(dataObj.char) : ""
+    If InStr(dataObj.event,"hot")
+        g["Edit"].Value := "Hot Item:`r`n`r`n"
+                         . "Event: " dataObj.event "`r`n"
+                         . "index / idCmd / label: " dataObj.index " / " dataObj.idCmd " / " dataObj.label "`r`n"
+                         . "old index / idCmd:     " dataObj.oldIndex " / " dataObj.oldIdCmd "`r`n`r`n"
+                         . "flags: " dataObj.hoverFlags " / " Format("0x{:X}",dataObj.hoverFlagsInt) "`r`n"
+                         . "RECT X/Y/W/H: " dataObj.dims.X " / " dataObj.dims.Y " / " dataObj.dims.W " / " dataObj.dims.H
+    Else If InStr(dataObj.event,"drag")
+        g["Edit"].Value := "Drag Info:`r`n`r`n"
+                         . "Event: " dataObj.event "`r`n"
+                         . "index / idCmd / label: " dataObj.index " / " dataObj.idCmd " / " dataObj.label "`r`n"
+                         . "old index / idCmd:     " dataObj.oldIndex " / " dataObj.oldIdCmd "`r`n`r`n"
+                         . "RECT X/Y/W/H: " dataObj.dims.X " / " dataObj.dims.Y " / " dataObj.dims.W " / " dataObj.dims.H
+    Else If (dataObj.event = "char") Or (dataObj.event = "KeyDown")
+        g["Edit"].Value := "Keyboard Events:`r`n`r`n"
+                         . "Event: " dataObj.event "`r`n"
+                         . "vKey: " dataObj.vKey "`r`n"
+                         . "Char: " dataObj.char " / " char "`r`n"
+                         . "index / idCmd / label: " dataObj.index " / " dataObj.idCmd " / " dataObj.label "`r`n"
+}
+
+guiEvents(ctl,info) {
+    n := ctl.Name
+    If (n="top" or n="left" or n="right" or n="bottom")
+        tb.Position(n)
+    Else If (n="Move")
+        tb.MoveButton(ctl.gui["MoveFrom"].Value,ctl.gui["MoveTo"].Value)
+    Else If (n="ShowText")
+        tb.ShowText(true)
+    Else If (n="HideText")
+        tb.ShowText(false)
+    Else If (n="SmallIcons")
+        tb.SetImageList("small")
+    Else If (n="LargeIcons")
+        tb.SetImageList("big")
+    Else If (n="Hide")
+        tb.HideButton(ctl.gui["HideNum"].Value,true)
+    Else If (n="Show")
+        tb.HideButton(ctl.gui["HideNum"].Value,false)
+    Else If (n="Enable")
+        tb.EnableButton(ctl.gui["EnableNum"].Value,true)
+    Else If (n="Disable")
+        tb.EnableButton(ctl.gui["EnableNum"].Value,false)
+    Else If (n="Customize")
+        tb.OldCustomize()
+    Else If (n="Customizer")
+        tb.Customizer()
+    Else If (n="ExIm") {
+        Msgbox "Exporting/Clearing the toolbar...."
+        btnLayout := tb.Export()
+        tb.ClearButtons()
+        Sleep 1000
+        MsgBox "Now importing."
+        tb.Import(btnLayout)
+    }
+}
+
+GuiClose(g) {
+    ExitApp
+}
+
+F1::tb.SetButtonSize(64,64)
+F2::tb.SetButtonSize(32,32)
+F3::msgbox tb.type
+
+;=======================================================================================
+; End Example
+;=======================================================================================
+;
+; Toolbar Class
+;
+;=======================================================================================
+;=======================================================================================
+
+class Toolbar { ; extends Toolbar.Private {
+    Static TBBUTTON_size := ((A_PtrSize = 4) ? 20 : 32), NMHDR_size := (A_PtrSize * 3)
+    
+    Static styles := {AltDrag:0x400       ; Toolbar Styles https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-control-and-button-styles
+                    , CustomErase:0x2000, Flat:0x800, List:0x1000, RegisterDrop:0x4000, ToolTips:0x100, Transparent:0x8000, Wrapable:0x200
+                    
+                    , Border:0x800000, TabStop:0x10000, ThickFrame:0x40000 ; Window Styles https://docs.microsoft.com/en-us/windows/win32/winmsg/window-styles
+                    , Child:0x40000000
+                    
+                    , Adjustable:0x20     ; Common Control Styles https://docs.microsoft.com/en-us/windows/win32/controls/common-control-styles
+                    , Bottom:0x3, Left:0x81, Right:0x83, Top:0x1, NoDivider:0x40, NoMoveX:0x82, NoMoveY:0x2, NoParentAlign:0x8, NoResize:0x4, Vert:0x80}
+                    
+    Static bStyles := {AutoSize:0x10      ; Toolbar Button Styles https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-control-and-button-styles
+                    , Button:0, Check:0x2, CheckGroup:0x6, DropDown:0x8, Group:0x4, NoPrefix:0x20, Sep:0x1, ShowText:0x40, WholeDropDown:0x80}
+    
+    Static exStyles := {DoubleBuffer:0x80 ; Extended Toolbar Styles https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-extended-styles
+                      , DrawDDArrows:0x01, HideClippedButtons:0x10, MixedButtons:0x08, MultiColumn:0x02, Vertical:0x04}
+    
+    Static states := {Checked:0x01        ; Toolbar Button States https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-button-states
+                    , Ellipses:0x40, Enabled:0x04, Hidden:0x08, Marked:0x80, Pressed:0x02, Wrap:0x20, Grayed:0x10} ; TBSTATE_INDETERMINATE = Grayed = 0x10
+    
+    Static flags := {Large:0x1            ; TB_GETBITMAPFLAGS https://docs.microsoft.com/en-us/windows/win32/controls/tb-getbitmapflags
+    
+                   , ByIndex:0x80000000   ; TBBUTTONINFOA dwMask https://docs.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-tbbuttoninfoa
+                   , Command:0x20, Image:0x1, lParam:0x10, Size:0x40, State:0x4, Style:0x8, Text:0x2}
+    
+    Static wm_n := {BeginAdjust:-703      ; WM_NOTIFY Toolbar Notifications https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-notifications
+                  , BeginDrag:-701, CustHelp:-709, DeletingButton:-715, DragOut:-714, DragOver:-727, DropDown:-710, DupAccelerator:-725, EndAdjust:-704
+                  , EndDrag:-702, GetObject:-712, HotItemChange:-713, InitCustomize:-723, MapAccelerator:-728, QueryDelete:-707, QueryInsert:-706
+                  , Reset:-705, Restore:-721, Save:-722, ToolbarChange:-708, WrapAccelerator:-726, WrapHotItem:-724, EndCustomize:2 ; TBNRF_ENDCUSTOMIZE
+                  , GetButtonInfo:((A_PtrSize=8)?-720:-700), GetDispInfo:((A_PtrSize=8)?-717:-716), GetInfoTip:((StrLen(Chr(0xFFFF)))?-719:-718)
+                  
+                  , Char:-18 ; NM_* events https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-notifications
+                  , CustomDraw:-12, KeyDown:-15, LDown:-20, ReleasedCapture:-16, ToolTipsCreated:-19, LClick:-2, LDClick:-3, RClick:-5, RDClick:-6}
+    
+    Static messages := {_AddButtons:0x414 ; Toolbar Messages https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-messages
+                      , _AddString:(StrLen(Chr(0xFFFF))?0x044D:0x041C), _AutoSize:0x421, _ButtonCount:0x418, _CheckButton:0x402, _CommandToIndex:0x419
+                      , _Customize:0x41B, _DeleteButton:0x416, _EnableButton:0x401, _GetButton:0x417, _GetButtonSize:0x43A, _GetButtonInfo:(StrLen(Chr(0xFFFF))?0x43F:0x441)
+                      , _GetButtonText:(StrLen(Chr(0xFFFF))?0x044B:0x042D), _GetExtendedStyle:0x455, _GetHotItem:0x447, _GetIdealSize:0x463, _GetImageList:0x431
+                      , _GetImageListCount:0x462, _GetItemDropDownRect:0x467, _GetItemRect:0x41D, _GetMaxSize:0x453, _GetPadding:0x456
+                      , _GetRect:0x433, _GetRows:0x428, _GetState:0x412, _GetStyle:0x439, _GetString:(StrLen(Chr(0xFFFF))?0x045B:0x045C), _GetTextRows:0x43D
+                      , _HideButton:0x404, _Indeterminate:0x405, _InsertButton:(StrLen(Chr(0xFFFF))?0x0443:0x0415), _IsButtonChecked:0x40A, _IsButtonEnabled:0x40A
+                      , _IsButtonHidden:0x40C, _IsButtonHighlighted:0x40E, _IsButtonIndeterminate:0x40D, _IsButtonPressed:0x40B, _MakeButton:0x406
+                      , _MoveButton:0x452, _PressButton:0x403, _SetButtonInfo:(StrLen(Chr(0xFFFF))?0x0440:0x0442), _SetButtonSize:0x41F, _SetButtonWidth:0x43B
+                      , _SetDisabledImageList:0x436, _SetExtendedStyle:0x454, _SetHotImageList:0x434, _SetHotItem:0x448, _SetHotItem2:0x45E
+                      , _SetImageList:0x430, _SetIndent:0x42F, _SetListGap:0x460, _SetMaxTextRows:0x43C, _SetPadding:0x457, _SetPressedImageList:0x468
+                      , _SetRows:0x427, _SetState:0x411, _SetStyle:0x438, _HitTest:0x445, _GetAnchorHighlight:0x44A, _SetAnchorHighlight:0x449}
+    
+    Static hotItemFlags := {Accelerator:0x4 ; https://docs.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-nmtbhotitem
+                          , ArrowKeys:0x2, DupAccel:0x8, Entering:0x10, Leaving:0x20, LMouse:0x80, Mouse:0x1, Reselect:0x40, ToggleDropDown:0x100} ; Other:0x0
+    
+    hwnd:=0, _gui:="", ctrl:="", Name:="", Type:="Toolbar"
+    ShowText := false, easyMode := true, pos:="top", exStyles := "", startStyles := "", counter := 1
+    callback := "tbEvent", reAddButton := true, hotItem := 0, hotItemID := 0
+    
+    firstAdd := false
+    
+    ImageLists := ""
+    IL_Default := "", IL_Hot := "", IL_Pressed := "", IL_Disabled := ""
+    NMHDR:={}, NMMOUSE:={}, NMKEY:={}, btns := [], btnsBackup :=[]
+    
+    __New(in_gui:="", sOptions:="", Styles:="") {  ; TBSTYLE_FLAT     := 0x0800 Required to show separators as bars.
+        _Styles := "", this.startStyles := Styles, this.ImageLists := Map(), this.ImageLists.CaseSense := false ; _exStyles := 0
+        Loop Parse Trim(Styles), " "
+        {
+            v := A_LoopField
+            If (v="DrawDDArrows" Or v="HideClippedButtons" Or v="DoubleBuffer" Or v="MixedButtons" Or v="MultiColumn" Or v="Vertical") {
+                this.exStyles .= A_LoopField " "
+                Continue
+            }
+            If this.easyMode {
+                If (v="top" Or v="bottom" or v="left" Or v="right")
+                    this.pos := A_LoopField
+                Else
+                    (v = "ShowText") ? this.%v% := true : _Styles .= this.lu(A_LoopField,true) " "
+            } Else
+                _Styles .= this.lu(A_LoopField,true) " "
+        }
+        
+        If this.easyMode { ; final easy mode modifications
+            (!InStr(Styles,"NoParentAlign")) ? (_Styles .= " " this.lu("NoParentAlign",true), this.startStyles .= " NoParentAlign") : ""
+            (!InStr(Styles,"NoResize")) ? (_Styles .= " " this.lu("NoResize",true), this.startStyles .= " NoResize") : ""
+            this.startStyles := RegExReplace(this.startStyles,"i)(left|right|top|bottom)","")
+            this.startStyles := Trim(RegExReplace(this.startStyles,"[ ]{2,}"," "))
             
-            return AllowCustom
+            For prop, value in Toolbar.exStyles.OwnProps() ; filter out exStyles from main startStyles
+                this.startStyles := RegExReplace(StrReplace(this.startStyles,prop,""),"[ ]{2,}"," ")
         }
-        If (nCode = this.TBN_QUERYDELETE)
-            return AllowCustom
-        If (nCode = this.TBN_GETBUTTONINFO)
-        {
-            iItem := NumGet(Param + (A_PtrSize * 3), 0, "Int")
-            If (iItem = this.DefaultBtnInfo.Length())
-                return False
-            For each, Member in this.DefaultBtnInfo[iItem+1]
-                %each% := Member
-            If (Text != "")
-            {
-                VarSetCapacity(BTNSTR, (StrPut(Text) * (A_IsUnicode ? 2 : 1), 0))
-            ,   StrPut(Text, &BTNSTR, StrPut(Text) * 2)
-                SendMessage, this.TB_ADDSTRING, 0, &BTNSTR,, % "ahk_id " this.tbHwnd
-                Index := ErrorLevel, this.DefaultBtnInfo[iItem+1]["Index"] := Index
-            ,   this.DefaultBtnInfo[iItem+1]["Text"] := Text
-            }
-            NumPut(Icon, Param + (A_PtrSize * 4), 0, "Int") ; iBitmap
-        ,   NumPut(ID, Param + (A_PtrSize * 4), 4, "Int") ; idCommand
-        ,   NumPut(State, Param + (A_PtrSize * 4), 8, "Char") ; tbState
-        ,   NumPut(Style, Param + (A_PtrSize * 4), 9, "Char") ; tbStyle
-        ,   NumPut(Index, Param + (A_PtrSize * 4), 8 + (A_PtrSize * 2), "Int") ; iString
-            return true
-        }
-        If (nCode = this.TBN_TOOLBARCHANGE)
-        {
-            CurrentButtons := this.Export(true)
-        ,   this.Presets.Load(CurrentButtons)
-        ,   CurrentButtons := ""
-        }
-        If (nCode = this.TBN_RESET)
-        {
-            If (AllowReset)
-            {
-                this.Reset()
-                return 2
-            }
-        }
-        If (nCode = this.TBN_INITCUSTOMIZE)
-            return HideHelp
-        return ""
+        
+        this._gui := in_gui
+        ctl := this._gui.Add("Custom","ClassToolbarWindow32 " sOptions " " _Styles)
+        this.ctrl := ctl, this.hwnd := ctl.hwnd, this.Name := ctl.Name
+        
+        For prop, value in Toolbar.wm_n.OwnProps() ; register callback for all events
+            this.ctrl.OnNotify(value,ObjBindMethod(this,"__tbNotify"))
+        
+        this.SendMsg(this._SetExtendedStyle, 0, this.MakeFlags(this.exStyles,"exStyles"))
+        
+        this.NMHDR := Toolbar.NMHDR.New(), this.NMMOUSE := Toolbar.NMMOUSE.New(), this.NMKEY := Toolbar.NMKEY.New() ; initialize structures
     }
-;=======================================================================================
-;    Method:             Reset
-;    Description:        Restores all toolbar's buttons to default layout.
-;                        Default layout is set by the buttons added. This can be changed
-;                            calling the SetDefault method.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    Reset() {
-        BtnsArray := IsObject(CustomArray) ? CustomArray : this.DefaultBtnInfo
-    ,   this.Get("", "", Rows)
-        Loop, % this.GetCount()
-            this.Delete(1)
-        For each, Button in BtnsArray
-        {
-            For each, Member in Button
-                %each% := Member
-            If ((Rows > 1) && (Style = this.BTNS_SEP))
-                State := 0x24
-            If (Text != "")
-            {
-                VarSetCapacity(BTNSTR, (StrPut(Text) * (A_IsUnicode ? 2 : 1), 0))
-            ,   StrPut(Text, &BTNSTR, StrPut(Text) * 2)
-                SendMessage, this.TB_ADDSTRING, 0, &BTNSTR,, % "ahk_id " this.tbHwnd
-                Index := ErrorLevel
-            }
-            VarSetCapacity(TBBUTTON, 8 + (A_PtrSize * 3), 0)
-        ,   NumPut(Icon, TBBUTTON, 0, "Int")
-        ,   NumPut(ID, TBBUTTON, 4, "Int")
-        ,   NumPut(State, TBBUTTON, 8, "Char")
-        ,   NumPut(Style, TBBUTTON, 9, "Char")
-        ,   NumPut(Index, TBBUTTON, 8 + (A_PtrSize * 2), "Int")
-            SendMessage, this.TB_ADDBUTTONS, 1, &TBBUTTON,, % "ahk_id " this.tbHwnd
-        }
-        return (ErrorLevel = "FAIL") ? False : true
+    __Get(key,p) {
+        result := this.lu(key)
+        If !result
+            throw Exception("Invalid property specified: " key, -1)
+        Else return result
     }
-;=======================================================================================
-;    Method:             SetButtonSize
-;    Description:        Sets the size of buttons on a toolbar. Affects current buttons.
-;    Parameters:
-;        W:              Width of buttons, in pixels
-;        H:              Height of buttons, in pixels
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
+    lu(sInput,TextOutput := false) { ; LookUp - return integer
+        If (Toolbar.styles.HasOwnProp(sInput))
+            output := Toolbar.styles.%sInput%
+        Else If (Toolbar.bStyles.HasOwnProp(sInput))
+            output := Toolbar.bStyles.%sInput%
+        Else If (Toolbar.exStyles.HasOwnProp(sInput))
+            output := Toolbar.exStyles.%sInput%
+        Else If (Toolbar.states.HasOwnProp(sInput))
+            output := Toolbar.states.%sInput%
+        Else If (Toolbar.flags.HasOwnProp(sInput))
+            output := Toolbar.flags.%sInput%
+        Else If (Toolbar.wm_n.HasOwnProp(sInput))
+            output := Toolbar.wm_n.%sInput%
+        Else If (Toolbar.messages.HasOwnProp(sInput))
+            output := Toolbar.messages.%sInput%
+        Else If (sInput = "hide")
+            return Toolbar.states.Hidden
+        Else
+            return ; throw Exception("Unknown property: " sInput)
+        
+        output := TextOutput ? Format("0x{:X}",output) : output
+        return output
+    }
+    rlu(iInput, member) { ; reverse lookup constant by value (usually only for events)
+        If (iInput = "")
+            return ""
+        output := ""
+        For prop, value in Toolbar.%member%.OwnProps() {
+            If (value = iInput) {
+                output := prop
+                Break
+            }
+        }
+        If !output
+            Msgbox "Unknown value: " iInput " / " Format("0x{:X}",iInput) " / Type: " Type(iInput) " / Len: " StrLen(iInput)
+        Else return output
+    }
+    AutoSize() {
+        PostMessage this._AutoSize, 0, 0,this.hwnd ; no return value, and no more ErrorLevel... hm...
+    }
+    AddConvert(btnArray,initial) { ; for internal use only
+        For i, b in btnArray {
+            If !b.HasProp("label")
+                throw Exception("Button data must contain a label property.")
+            
+            (b.label="") ? sep := true : sep := false
+            (!b.HasProp("icon")) ? b.icon := 0 : (initial) ? b.icon -= 1 : ""   ; initial only
+            (!b.HasProp("idCmd")) ? b.idCmd := 1000+(this.counter++) : ""       ; initial only
+            
+            If (initial And !sep) {
+                (initial And !b.HasProp("states")) ? b.states := "Enabled" : (initial And !InStr(b.states,"Enabled")) ? b.states .= " Enabled" : ""
+                (initial And Type(b.states)="String") ? b.states := this.MakeFlags(b.states,"states") : ""  ; initial only
+                
+                (initial And !b.HasProp("styles")) ? b.styles := "AutoSize" : (initial And !InStr(b.styles,"AutoSize")) ? b.styles .= " AutoSize" : ""
+                (initial And Type(b.styles)="String") ? b.styles := this.MakeFlags(b.styles,"bStyles") : "" ; initial only
+            } Else If (initial and sep)
+                b.styles := 1, b.states := 0
+            
+            (initial And !b.HasProp("iString")) ? b.iString := -1 : ""
+            btnArray[i] := b
+        }
+        
+        return btnArray
+    }
+    Add(btnArray, initial:=true) {
+        If initial
+            btnArray := this.AddConvert(btnArray,initial)
+        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size * btnArray.Length, 0)
+        offset := 0
+        
+        For i, b in btnArray ; add buttons
+            this.Fill_TBBUTTON(TBBUTTON, offset, b.label, b.icon, b.idCmd, b.states, b.styles, b.iString), offset += Toolbar.TBBUTTON_size
+        
+        result := this.SendMsg(this._AddButtons, btnArray.Length, TBBUTTON.ptr)
+        this.SendMsg(this._SetMaxTextRows,this.ShowText ? 1 : 0) ; set text display mode
+        
+        If (this.easyMode And initial) {
+            this.Position(this.pos) ; position toolbar after button add?
+            this.Position(this.pos)
+        }
+         
+        this.AutoSize(), this.reAddButton := true
+    }
+    Insert(b,idx) {
+        a := this.AddConvert(b,true), b := a[1]
+        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size, 0)
+        this.Fill_TBBUTTON(TBBUTTON, offset:=0, b.label, b.icon, b.idCmd, b.states, b.styles, b.iString)
+        this.SendMsg(this._InsertButton,idx-1,TBBUTTON.ptr)
+    }
+    MakeFlags(sInput,member) { ; return toolbar styles integer from space delimited text input
+        output := 0
+        Loop Parse Trim(sInput), " "
+        {
+            If IsInteger(A_LoopField)
+                throw Exception("No numeric property: " member " / Value: " A_LoopField)
+            output := output | Toolbar.%member%.%A_LoopField%
+        }
+        return output
+    }
+    GetFlags(iInput,member) { ; return text names of properties from given input integer, must specify static member above to search
+        output := ""
+        For prop, value in Toolbar.%member%.OwnProps()
+            (iInput & value) ? output .= prop " " : ""
+        return Trim(output)
+    }
+    EnableButton(idx, status) {
+        btns := this.SaveNewLayout()
+        result := this.SendMsg(this._EnableButton,btns[idx].idCmd,this.MakeLong(status,0))
+        return result
+    }
+    HideButton(idx, status) {
+        btns := this.SaveNewLayout()
+        result := this.SendMsg(this._HideButton,btns[idx].idCmd,this.MakeLong(status,0))
+        return result
+    }
+    MoveButton(idx,pos) {
+        result := this.SendMsg(this._MoveButton,idx-1,pos-1)
+        return result
+    }
+    ClearButtons() {
+        While this.SendMsg(this._DeleteButton, 0,0)
+            i := 1
+    }
+    Position(p:="", repeat:=false) {
+        this.pos := p
+        dims := this.GetButtonDims() ; bWidth, bHeight, hPad, vPad
+        this._gui.GetClientPos(,,w,h)
+        height := dims.h+2, width := dims.w+2
+        
+        If (p="right") {
+            this.ctrl.Move(w-width,0,width,h)
+            this.SendMsg(this._SetStyle, 0, this.MakeFlags(this.startStyles " Vert","styles"))
+        } Else If (p="bottom") {
+            this.ctrl.Move(0,h-height,w,height)
+            this.SendMsg(this._SetStyle, 0, this.MakeFlags(this.startStyles,"styles"))
+        } Else If (p="left") {
+            this.ctrl.Move(0,0,width,h)
+            this.SendMsg(this._SetStyle, 0, this.MakeFlags(this.startStyles " Vert","styles"))
+        } Else { ; top
+            this.ctrl.Move(0,0,w,height)
+            this.SendMsg(this._SetStyle, 0, this.MakeFlags(this.startStyles,"styles"))
+        }
+        
+        btns := this.SaveNewLayout()
+        For i, b in btns { ; modify button state / add or remove "Wrap" state for orientation
+            statesTxt := this.GetFlags(b.states,"states")
+            
+            If (p="left" Or p="right") And !InStr(statesTxt,"Wrap")
+                statesTxt .= " Wrap"
+            Else If (p="top" Or p="bottom") And InStr(statesTxt,"Wrap")
+                statesTxt := RegExReplace(StrReplace(statesTxt,"Wrap"),"[ ]{2,}"," ")
+            
+            b.states := this.MakeFlags(statesTxt,"states")
+        }
+        
+        this.ClearButtons()
+        this.Add(btns,false)
+    }
+    ShowText(status) {
+        this.ShowText := status
+        this.SendMsg(this._SetMaxTextRows,status)
+        this.Position(this.pos) ; 2x redraws required for proper dimensions
+        this.Position(this.pos)
+    }
+    OldCustomize() {
+        this.SendMsg(this._Customize, 0, 0)
+    }
+    Delete(idx) {
+        return this.SendMsg(this._DeleteButton, idx-1,0)
+    }
+    Fill_TBBUTTON(TBBUTTON, offset, label, iBitmap, idCommand, fsState, fsStyle, iString:=-1) {
+        encoding := !StrLen(Chr(0xFFFF)) ? "UTF-8" : "UTF-16"
+        
+        If (iString = -1) { ; create string and add to pool
+            BTNSTR := BufferAlloc(StrPut(label,encoding), 0)
+            StrPut(label, BTNSTR.ptr, encoding)
+            iString := SendMessage(this._AddString, 0, BTNSTR.ptr, this.hwnd)
+        }
+        
+        NumPut "Int", iBitmap, "Int", idCommand, "Char", fsState, "Char", fsStyle, TBBUTTON, offset
+        If iString >= 0
+            NumPut "Ptr", iString, TBBUTTON, ((A_PtrSize = 4) ? 16+offset : 24+offset)
+        
+        return iString
+    }
+    GetButton(idx) {
+        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0), r := this.SendMsg(this._GetButton,idx-1,TBBUTTON.ptr)
+        iImg := NumGet(TBBUTTON,"Int"), idCmd := NumGet(TBBUTTON,4,"UInt"), states := NumGet(TBBUTTON,8,"Char"), styles := NumGet(TBBUTTON,9,"Char")
+        iString := NumGet(TBBUTTON,((A_PtrSize=4)?16:24),"Ptr")
+        
+        ; str := BufferAlloc(64,0), dword := this.MakeLong(64,iString)
+        ; r := this.SendMsg(this._GetString,dword,str.ptr), txt := StrGet(str)
+        txt := this.GetButtonText(idCmd)
+        
+        return {index:idx, label:txt, icon:iImg, states:states, styles:styles, idCmd:idCmd, iString:iString}
+    }
+    ; GetButtonInfo(idx, byIndex:=false) { ; need to turn this into SetButtonText()
+        ; TBI := BufferAlloc(bSize:=(A_PtrSize=4)?32:48,0)
+        ; dwMask := this.Command|this.Image|this.Size|this.State|this.Style
+        ; (byIndex) ? (dwMask := dwMask | this.ByIndex) : ""
+        
+        ; NumPut "UInt", bSize, "Int", dwMask, TBI
+        ; r := this.SendMsg(this._GetButtonInfo, idx, TBI.Ptr)
+        ; idCmd := NumGet(TBI, 8, "Int"), iImg  := NumGet(TBI, 12, "Int")
+        ; states := NumGet(TBI, 16, "UChar"), styles := NumGet(TBI, 17, "UChar"), width  := NumGet(TBI, 18, "UShort")
+        
+        ; tSize := this.SendMsg(this._GetButtonText, idCmd, 0)
+        ; tBuf := BufferAlloc((tSize+1) * (StrLen(Chr(0xFFFF))?2:1),0)
+        ; this.SendMsg(this._GetButtonText, idCmd, tBuf.Ptr), txt := StrGet(tBuf)
+        
+        ; TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0)
+        ; r := this.SendMsg(this._GetButton,idx,TBBUTTON.ptr)
+        ; iString := NumGet(TBBUTTON,((A_PtrSize=4)?16:24),"Ptr")
+        
+        ; return {label:txt, icon:iImg, states:states, styles:styles, idCmd:idCmd, iString:iString} ; iString (str idx)
+    ; }
+    GetButtonText(idx) {
+        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0)
+        r := this.SendMsg(this._GetButton,idx-1,TBBUTTON.ptr)
+        idCmd := NumGet(TBBUTTON,4,"UInt")
+        
+        tSize := this.SendMsg(this._GetButtonText, idCmd, 0) << 32 >> 32 ; needed for 32-bit compatibility
+        If (tSize = -1)
+            return ""
+        
+        TBBUTTON := "", tBuf := BufferAlloc((tSize+1) * (StrLen(Chr(0xFFFF)) ? 2 : 1),0)
+        this.SendMsg(this._GetButtonText, idCmd, tBuf.Ptr), txt := StrGet(tBuf)
+        return txt
+    }
+    GetButtonDims() {
+        btns := this.SaveNewLayout()
+        
+        _RECT := BufferAlloc(16,0), bWidth := 0, bHeight := 0
+        For i, b in btns {
+            TBI := BufferAlloc(bSize:=(A_PtrSize=4)?32:48,0)
+            dwMask := this.Style
+            NumPut "UInt", bSize, "Int", dwMask, TBI
+            this.SendMsg(this._GetButtonInfo,b.idCmd,TBI.ptr)
+            styles := NumGet(TBI,17,"Char")
+            If (styles & Toolbar.bStyles.Sep) ; check and skip if separator
+                continue
+            
+            r := this.SendMsg(this._GetRect, b.idCmd, _RECT.ptr)
+            l := NumGet(_RECT,0,"UInt"), t := NumGet(_RECT,4,"UInt"), r := NumGet(_RECT,8,"UInt"), b := NumGet(_RECT,12,"UInt")
+            w := r-l, h := b-t
+            bWidth := (bWidth < w) ? w : bWidth
+            bHeight := (bHeight < h) ? h : bHeight
+        }
+        padding := this.SendMsg(this._GetPadding, 0, 0), this.MakeShort(padding, hPad, vPad)
+        dims := {w:bWidth, h:bHeight, hPad:hPad, vPad:vPad}, TBI := "", _RECT := ""
+        return dims
+    }
+    CmdToIdx(idCmd) {
+        return this.SendMsg(this._CommandToIndex,idCmd)+1
+    }
+    BtnCount() {
+        return this.SendMsg(this._ButtonCount)
+    }
+    __tbNotify(ctl, lParam) { ; TB_HITTEST / TB_GETRECT/TB_GETITEMRECT ; https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-notifications
+        this.ResetStructs(), p := A_PtrSize, encoding := !StrLen(Chr(0xFFFF)) ? "UTF-8" : "UTF-16"
+        
+        this.NMHDR.hwnd   := NumGet(lParam,"Ptr")
+        this.NMHDR.idFrom := NumGet(lParam+A_PtrSize,"UInt")
+        this.NMHDR.code   := NumGet(lParam+(A_PtrSize * 2),"Int") ; Technically a UINT / WM_NOTIFY msg code
+        
+        event := this.rlu(this.NMHDR.code,"wm_n") ; lookup event name
+        
+        If InStr(event,"drag")
+            Debug.Msg(event)
+        
+        If (this.NMHDR.code = 0 or this.NMHDR.code = "" Or event = "")
+            return
+        
+        o := {event:event, eventInt:this.NMHDR.code
+            , index:0, idCmd:0, label:"", dims:{x:0, y:0, w:0, h:0} ; data for clicked/hovered button | old: rect:{t:"", b:"", r:"", l:""}
+            , hoverFlags:"", hoverFlagsInt:0                        ; more specific hover data
+            , vKey:-1, char:-1                                      ; when hovering + keystroke, these are populated
+            , oldIndex:0, oldIdCmd:0, oldLabel:""}                  ; for initially dragged button, or previous hot item
+        
+        Switch this.NMHDR.code { ; WM_NOTIFY msgs ; https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-notifications
+            Case this.LClick, this.LDClick, this.LDown, this.RClick, this.RDClick:
+                this.NMMOUSE.dwItemSpec := NumGet(lParam+Toolbar.NMHDR_size,"Ptr")
+                this.NMMOUSE.dwItemData := NumGet(lParam+Toolbar.NMHDR_size+A_PtrSize,"UPtr")
+                this.NMMOUSE.pointX := NumGet(lParam+Toolbar.NMHDR_size+(A_PtrSize * 2),"UInt")
+                this.NMMOUSE.pointY := NumGet(lParam+Toolbar.NMHDR_size+(A_PtrSize * 2)+4,"UInt")
+                this.NMMOUSE.dwHitInfo := NumGet(lParam+Toolbar.NMHDR_size+(A_PtrSize * 2)+8,"UInt")
+                
+                b := this.GetButton(this.CmdToIdx(this.NMMOUSE.dwItemSpec)+1)
+                
+                o.idCmd := b.idCmd, o.index := b.index, o.label := b.label
+                return true
+                
+            Case this.Char: ; https://docs.microsoft.com/en-us/windows/win32/controls/nm-char-toolbar
+                char := NumGet(lParam+Toolbar.NMHDR_size,"UInt")
+                dwItemPrev := NumGet(lParam+Toolbar.NMHDR_size+4,"Int") ; dwItemNext seems to alwys be -1
+                b := this.GetButton(this.CmdToIdx(dwItemPrev))
+                o.char := char, o.idCmd := dwItemPrev, o.index := b.index, o.label := b.label
+            
+            Case this.BeginDrag, this.DragOut, this.DeletingButton, this.DropDown: ; NMTOOLBAR struct ; https://docs.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-nmtoolbara
+                idCmd := NumGet(lParam,Toolbar.NMHDR_size,"Int")
+                b := this.GetButton(this.CmdToIdx(idCmd))
+                o.index := b.index, o.idCmd := b.idCmd, o.label := b.label
+            
+            Case this.EndDrag: ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-enddrag ; NMTOOLBAR struct, but treat this one differently
+                b := {index:0, label:"", icon:0, idCmd:0, styles:0, states:0, iString:-2} ; setup blank button, just in case
+                oldIdCmd := NumGet(lParam,Toolbar.NMHDR_size,"Int")                       ; treat iItem as "old ID" becuase it is
+                (this.hotItem) ? b := this.GetButton(this.hotItem) : ""                   ; record latest hot item as current index and idCmd
+                bOld := this.GetButton(this.CmdToIdx(oldIdCmd))
+                o.index := b.index, o.idCmd := b.idCmd, o.label := b.label
+                o.oldIdCmd := oldIdCmd, o.oldIndex := bOld.index, o.oldLabel := bOld.label
+            
+            Case this.HotItemChange, this.DragOver: ; NMTBHOTITEM struct ; https://docs.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-nmtbhotitem
+                idOld := NumGet(offset := lParam+Toolbar.NMHDR_size,"Int")
+                idNew := NumGet(offset+4,"Int")
+                b := this.GetButton(this.CmdToIdx(idNew))
+                bOld := this.GetButton(this.CmdToIdx(idOld))
+                dwFlags := NumGet(lParam+Toolbar.NMHDR_size+8,"UInt")
+                txtFlags := this.GetFlags(dwFlags,"hotItemFlags")
+                this.hotItem := b.index, this.hotItemID := b.idCmd
+                
+                o.index := b.index, o.idCmd := b.idCmd, o.label := b.label
+                o.hoverFlags := txtFlags, o.hoverFlagsInt := dwFlags
+                o.oldIndex := bOld.index, o.oldIdCmd := bOld.idCmd, o.oldLabel := bOld.label
+            
+            Case this.KeyDown: ; https://docs.microsoft.com/en-us/windows/win32/controls/nm-keydown-toolbar
+                this.NMKEY.nVKEY  := NumGet(lParam+Toolbar.NMHDR_size,"UInt")
+                this.NMKEY.uFlags := NumGet(lParam+Toolbar.NMHDR_size+4,"UInt")
+                o.vKey := this.NMKEY.nVKEY
+            
+            ; ===================================================================================
+            ; === Customizer Events - these may go away, my custom customizer is better...... ===
+            ; ===================================================================================
+            
+            Case this.EndAdjust: ; * customizer ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-endadjust
+                ; this.btns := this.SaveNewLayout()
+            
+            Case this.GetButtonInfo: ; * customizer ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-getbuttoninfo
+                iItem := NumGet(lParam+Toolbar.NMHDR_size,"Int")
+                Debug.Msg("get btn info: " iItem)
+                If (iItem = this.BtnCount())
+                    return false
+                
+                b := this.GetButton(iItem+1)
+                this.Fill_TBBUTTON(lParam, Toolbar.NMHDR_size+A_PtrSize, b.label, b.icon, b.idCmd, b.states, b.styles, b.iString)
+                return true
+                
+            Case this.InitCustomize: ; * customizer ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-initcustomize
+                return 1
+            
+            Case this.QueryInsert: ; * customizer ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-queryinsert
+                return true
+            
+            Case this.QueryDelete: ; * customizer ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-querydelete
+                return true
+            
+            Case this.Reset: ; * customizer ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-reset
+                ; this.Position(this.pos)
+                return true
+            
+            Case this.ToolbarChange: ; * customizer ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-toolbarchange
+                return true
+            
+            Default:
+                this.ResetStructs()
+        }
+        
+        If (o.idCmd) {
+            Static RECT := BufferAlloc(16,0)
+            r := this.SendMsg(this._GetRect,b.idCmd,RECT.ptr)
+            L := NumGet(RECT,"Int"), T := NumGet(RECT,4,"Int"), R := NumGet(RECT,8,"Int"), B := NumGet(RECT,12,"Int")
+            ; o.rect := {L:L, T:T, R:R, B:B}
+            o.dims := {x:L, y:T, w:(R-L), h:(B-T)}
+        }
+        
+        ; If (event = "char" or event = "keydown")
+            ; Debug.Msg("event: " event " / vKey: " o.vKey " / char: " o.char " / idCmd: " o.idCmd)
+        
+        ; If (InStr(event,"drag"))
+            ; Debug.Msg("event: " event " / idCmd: " o.idCmd " / oldIdCmd: " o.oldIdCmd " / label: " o.label)
+        
+        cb := this.callback
+        If IsFunc(cb)
+            %cb%(this, lParam, o)
+    }
+    SaveNewLayout() { ; works, but not keeping track of removed buttons yet
+        btns := []
+        Loop this.SendMsg(this._ButtonCount) {
+            b := this.GetButton(A_Index) ; idCmd, iImg, states, styles, width, txt
+            btns.InsertAt(A_Index,b)
+        }
+        return btns
+    }
+    ResetStructs() {
+        this.NMHDR.hwnd:="", this.NMHDR.idFrom:="", this.NMHDR.code:="" ; NMHDR
+        this.NMMOUSE.dwItemSpec:="", this.NMMOUSE.dwItemData:="", this.NMMOUSE.pointX:="", this.NMMOUSE.pointY:="", this.NMMOUSE.lParam:="" ; NMMOUSE
+        this.NMKEY.nVKEY:="", this.NMKEY.uFlags:="" ; NMKEY
+    }
+    SendMsg(msg, wParam:=0, lParam:=0) { ; for generic message sending
+        return SendMessage(msg, wParam, lParam, this.hwnd)
+    }
+    IL_Create(ILname, icons, large:=false) {
+        handle := IL_Create(icons.Length, 5, large)
+        For i, o in icons {
+            a := StrSplit(o,"/")
+            img := a[1]
+            icon := (a.Has(2)) ? a[2] : ""
+            If (icon!="")
+                IL_Add(handle,img,icon)
+            Else IL_Add(handle,img)
+        }
+        this.ImageLists[ILname] := {handle:handle, files:icons, large:large}
+    }
+    IL_Add(ILname, icons) { ; append icons to an existing imagelist
+        If !this.ImageLists.Has(ILname)
+            throw Exception("Image list name doesn't exist: " ILname)
+        handle := this.ImageLists[ILname]
+        For i, o in icons {
+            a := StrSplit(o,"/"), img := a[1], icon := (a.Has(2)) ? a[2] : ""
+            If (icon!="")
+                IL_Add(handle,img,icon)
+            Else IL_Add(handle,img)
+            this.ImageLists[ILname].files.Push(o) ; append icons to file list
+        }
+    }
+    IL_Destroy(ILname) {
+        handle := this.ImageLists[ILname].handle
+        IL_Destroy(handle), this.ImageLists.Delete(ILname)
+    }
+    SetImageList(Default, Hot := "", Pressed := "", Disabled := "") {
+        this.IL_Default := Default, this.IL_Hot := Hot, this.IL_Pressed := Pressed, this.IL_Disabled := Disabled
+        result := this.SendMsg(this._SetImageList, 0, this.ImageLists[Default].handle)
+        (Hot) ? result := this.SendMsg(this._SetHotImageList, 0, this.ImageLists[Hot].handle) : ""
+        (Pressed) ? result := this.SendMsg(this._SetPressedImageList, 0, this.ImageLists[Pressed].handle) : ""
+        (Disabled) ? result := this.SendMsg(this._SetDisabledImageList, 0, this.ImageLists[Disabled].handle) : ""
+        this.Position(this.pos), this.Position(this.pos)
+        
+        return result
+    }
+    
     SetButtonSize(W, H) {
         Long := this.MakeLong(W, H)
-        SendMessage, this.TB_SETBUTTONSIZE, 0, Long,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
+        result := this.SendMsg(this._SetButtonSize, 0, Long)
+        this.ctrl.Move(,,,H)
+        ; this.Position(this.pos), this.Position(this.pos)
+        return result
     }
-;=======================================================================================
-;    Method:             SetDefault
-;    Description:        Sets the internal default layout to be used when customizing or
-;                        when the Reset method is called.
-;    Parameters:
-;        Options:        Same as Add().
-;        Buttons:        Same as Add().
-;    Return:             Always TRUE.
-;=======================================================================================
-    SetDefault(Options := "Enabled", Buttons*) {
-        this.DefaultBtnInfo := []
-        If (!Buttons.Length())
-            this.DefaultBtnInfo.Push({Icon: -1, ID: "", State: ""
-                                       , Style: this.BTNS_SEP, Text: "", Label: ""})
-        If (Options = "")
-            Options := "Enabled"
-        For each, Button in Buttons
-            this.SendMessage(Button, Options)
-        return true
+    
+    MakeLong(LoWord, HiWord) {
+        return (HiWord << 16) | (LoWord & 0xffff)
     }
-;=======================================================================================
-;    Method:             SetExStyle
-;    Description:        Sets toolbar's extended style.
-;    Parameters:
-;        Style:          Enter one or more words, separated by space or tab, from the
-;                            following list to set toolbar's extended styles:
-;                            Doublebuffer, DrawDDArrows, HideClippedButtons,
-;                            MixedButtons.
-;                        You may also enter an integer value to define the style.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    SetExStyle(Style) {
-        If Style is Integer
-            tbStyle_Ex_ := Style
-        Else
-        {
-            Loop, Parse, Style, %A_Space%%A_Tab%
-            {
-                If (this[ "TBSTYLE_EX_" A_LoopField ] )
-                    tbStyle_Ex_ += this[ "TBSTYLE_EX_" A_LoopField ]
-            }
-        }
-        SendMessage, this.TB_SETEXTENDEDSTYLE, 0, tbStyle_Ex_,, % "ahk_id " this.tbHwnd
+    
+    MakeShort(Long, ByRef LoWord, ByRef HiWord) {
+        LoWord := Long & 0xffff,   HiWord := Long >> 16
     }
-;=======================================================================================
-;    Method:             SetHotItem
-;    Description:        Sets the hot item on a toolbar.
-;    Parameters:
-;        Button:         1-based index of the button.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    SetHotItem(Button) {
-        SendMessage, this.TB_SETHOTITEM, Button-1, 0,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
+    
+    Customizer() {
+        files := this.ImageLists[this.IL_Default].files ; duplicate image list
+        large := this.ImageLists[this.IL_Default].large, this.IL_Create("Customizer",files,large)
+        
+        events := ObjBindMethod(this,"CustoEvents")
+        custo := Gui.New("AlwaysOnTop -MinimizeBox -MaximizeBox Owner" g.hwnd,"Customizer")
+        LV := custo.Add("ListView","w200 h200 vCustoList Report Checked -hdr",["Icon List"])
+        LV.OnEvent("ItemCheck",events)
+        LV.ModifyCol(1,170)
+        LV.SetImageList(this.ImageLists["Customizer"].handle,1)
+        
+        btns := this.SaveNewLayout()
+        
+        For i, b in btns {
+            c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
+            LV.Add("Icon" b.icon+1 c, (b.label) ? b.label : "Seperator")
+        }
+        custo.Add("Button","x+10 yp w100 vMoveUp","Move Up").OnEvent("click",events)
+        custo.Add("Button","y+0 w100 vMoveDown","Move Down").OnEvent("click",events)
+        custo.Add("Button","y+40 w100 vAddSep","Add Separator").OnEvent("click",events)
+        custo.Add("Button","y+0 w100 vRemSep","Remove Seperator").OnEvent("click",events)
+        custo.Add("Button","y+45 w50 vOK","OK").OnEvent("click",events)
+        custo.Add("Button","x+0 w50 vCancel","Cancel").OnEvent("click",events)
+        
+        this.btnsReset := this.SaveNewLayout()
+        
+        custo.Show("hide")
+        this._gui.GetPos(x,y,w,h), cX := x+(w//2), cY := y+(h//2)
+        custo.GetPos(,,w,h)
+        x := cX-(w//2), y := cY-(h//2)
+        custo.Show("x" x " y" y)
     }
-;=======================================================================================
-;    Method:             SetImageList
-;    Description:        Sets an ImageList to the toolbar control.
-;    Parameters:
-;        IL_Default:     ImageList ID of default ImageList.
-;        IL_Hot:         ImageList ID of Hot ImageList.
-;        IL_Pressed:     ImageList ID of Pressed ImageList.
-;        IL_Disabled:    ImageList ID of Disabled ImageList.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    SetImageList(IL_Default, IL_Hot := "", IL_Pressed := "", IL_Disabled := "") {
-        SendMessage, this.TB_SETIMAGELIST, 0, IL_Default,, % "ahk_id " this.tbHwnd
-        If (IL_Hot)
-            SendMessage, this.TB_SETHOTIMAGELIST, 0, IL_Hot,, % "ahk_id " this.tbHwnd
-        If (IL_Pressed)
-            SendMessage, this.TB_SETPRESSEDIMAGELIST, 0, IL_Pressed,, % "ahk_id " this.tbHwnd
-        If (IL_Disabled)
-            SendMessage, this.TB_SETDISABLEDIMAGELIST, 0, IL_Disabled,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             SetIndent
-;    Description:        Sets the indentation for the first button on a toolbar.
-;    Parameters:
-;        Value:          Value specifying the indentation, in pixels.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    SetIndent(Value) {
-        SendMessage, this.TB_SETINDENT, Value, 0,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             SetListGap
-;    Description:        Sets the distance between icons and text on a toolbar.
-;    Parameters:
-;        Value:          The gap, in pixels, between buttons on the toolbar.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    SetListGap(Value) {
-        SendMessage, this.TB_SETLISTGAP, Value, 0,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             SetMaxTextRows
-;    Description:        Sets maximum number of text rows for button captions.
-;    Parameters:
-;        MaxRows:        Maximum number of text rows. If omitted defaults to 0.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    SetMaxTextRows(MaxRows := 0) {
-        SendMessage, this.TB_SETMAXTEXTROWS, MaxRows, 0,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             SetPadding
-;    Description:        Sets the padding for icons a toolbar. 
-;    Parameters:
-;        X:              Horizontal padding, in pixels
-;        Y:              Vertical padding, in pixels
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    SetPadding(X, Y) {
-        Long := this.MakeLong(X, Y)
-        SendMessage, this.TB_SETPADDING, 0, Long,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             SetRows
-;    Description:        Sets the number of rows for a toolbar.
-;    Parameters:
-;        Rows:           Number of rows to set. If omitted defaults to 0.
-;        AddMore:        Indicates whether to create more rows than requested when the
-;                            system cannot create the number of rows specified.
-;                            If TRUE, the system creates more rows. If FALSE, the system
-;                            creates fewer rows.
-;    Return:             TRUE if successful, FALSE if there was a problem.
-;=======================================================================================
-    SetRows(Rows := 0, AddMore := False) {
-        Long := this.MakeLong(Rows, AddMore)
-        SendMessage, this.TB_SETROWS, Long,,, % "ahk_id " this.tbHwnd
-        return (ErrorLevel = "FAIL") ? False : true
-    }
-;=======================================================================================
-;    Method:             ToggleStyle
-;    Description:        Toggles toolbar's style.
-;    Parameters:
-;        Style:          Enter zero or more words, separated by space or tab, from the
-;                            following list to toggle toolbar's styles:
-;                            AltDrag, CustomErase, Flat, List, RegisterDrop, Tooltips,
-;                            Transparent, Wrapable, Adjustable, Border, ThickFrame,
-;                            TabStop.
-;                        You may also enter an integer value to define the style.
-;    Return:             TRUE if a valid style is passed, or FALSE otherwise.
-;=======================================================================================
-    ToggleStyle(Style) {
-        If Style is Integer
-            tbStyle := Style
-        Else
-        {
-            Loop, Parse, Style, %A_Space%%A_Tab%
-            {
-                If (this[ "TBSTYLE_" A_LoopField ] )
-                    tbStyle += this[ "TBSTYLE_" A_LoopField ]
-            }
-        }
-        ; TB_SETSTYLE moves the toolbar away from its position for some reason.
-        ; SendMessage, this.TB_SETSTYLE, 0, tbStyle,, % "ahk_id " this.tbHwnd
-        If (tbStyle != "")
-        {
-            WinSet, Style, ^%tbStyle%, % "ahk_id " this.tbHwnd
-            return true
-        }
-        Else
-            return False
-    }
-;=======================================================================================
-;    Presets Methods     These methods are used exclusively by the Presets Object.
-;                        Presets can be used to quickly change buttons of a toolbar
-;                            to predetermined or saved layouts.
-;=======================================================================================
-    Class tbPresets extends Toolbar.Private {
-;=======================================================================================
-;    Method:             Presets.Delete
-;    Description:        Deletes the layout of the specified slot. 
-;    Parameters:
-;        Slot:           Number of the slot containing the layout to be deleted.
-;    Return:             TRUE if the slot contains a layout, or FALSE otherwise.
-;=======================================================================================
-        Delete(Slot) {
-            If (IsObject(this[Slot]))
-            {
-                this.Delete(Slot)
-                return true
-            }
-            Else
-                return False
-        }
-;=======================================================================================
-;    Method:             Presets.Export
-;    Description:        Returns a text string with buttons and order in Add and
-;                            Insert methods compatible format from the specified slot.
-;    Parameters:
-;        Slot:           Number of the slot in which to save the layout.
-;        ArrayOut:       Set to TRUE to return an object array. The returned object
-;                            format is compatible with Presets.Save and Presets.Load
-;                            methods, which can be used to save and load layout presets.
-;    Return:             A text string with buttons information to be exported.
-;=======================================================================================
-        Export(Slot, ArrayOut := False) {
-            BtnArray := []
-            For i, Button in this[Slot]
-            {
-                For each, Member in Button
-                    %each% := Member
-                BtnString .= (Label ? (Label (Text ? "=" Text : "")
-                        .    ":" Icon+1 (Style ? "(" Style ")" : "")) : "") ", "
-                If (ArrayOut)
-                    BtnArray.Push({Icon: Icon, ID: ID, State: State
-                                   , Style: Style, Text: Text, Label: Label})
-            }
-            return ArrayOut ? BtnArray : RTrim(BtnString, ", ")
-        }
-;=======================================================================================
-;    Method:             Presets.Import
-;    Description:        Imports a buttons layout from a string in Add/Insert methods
-;                            format and saves it into the specified slot.
-;    Parameters:
-;        Slot:           Number of the slot in which to save the layout.
-;        Options:        Same as Add().
-;        Buttons:        Same as Add().
-;    Return:             Always TRUE.
-;=======================================================================================
-        Import(Slot, Options := "Enabled", Buttons*) {
-            BtnArray := []
-            If (Options = "")
-                Options := "Enabled"
-            For each, Button in Buttons
-            {
-                If (RegExMatch(Button, "^(\W?)(\w+)[=\s]?(.*)?:(\d+)\(?(.*?)?\)?$", Key))
-                {
-                    If (Key1)
-                        continue
-                    idCommand := this.StringToNumber(Key2)
-                ,   iString := Key3, iBitmap := Key4
-                ,   Struct := this.DefineBtnStruct(TBBUTTON, iBitmap, idCommand, iString, Key5 ? Key5 : Options)
-                ,   Struct.Label := Key2, BtnArray.Push(Struct)
-                }
-                Else
-                    Struct := this.BtnSep(TBBUTTON, Options), BtnArray.Push(Struct)
-            }
-            this[Slot] := BtnArray
-            return true
-        }
-;=======================================================================================
-;    Method:             Presets.Load
-;    Description:        Loads a layout from the specified slot.
-;    Parameters:
-;        Slot:           Number of the slot containing the layout to be loaded.
-;                        For convenience and internal operations this parameter can be an
-;                            object in the same format of Presets.Save Buttons parameter.
-;    Return:             TRUE if the slot contains a layout, or FALSE otherwise.
-;=======================================================================================
-        Load(Slot) {
-            If (IsObject(Slot))
-                Buttons := Slot
-            Else
-                Buttons := this[Slot]
-            If (!IsObject(Buttons))
-                return False
-            SendMessage, this.TB_GETROWS, 0, 0,, % "ahk_id " this.tbHwnd
-                Rows := ErrorLevel
-            SendMessage, this.TB_BUTTONCOUNT, 0, 0,, % "ahk_id " this.tbHwnd
-            Loop, % ErrorLevel
-                SendMessage, this.TB_DELETEBUTTON, 0, 0,, % "ahk_id " this.tbHwnd
-            For each, Button in Buttons
-            {
-                For each, Member in Button
-                    %each% := Member
-                If ((Rows > 1) && (Style = this.BTNS_SEP))
-                    State := 0x24
-                If (Text != "")
-                {
-                    VarSetCapacity(BTNSTR, (StrPut(Text) * (A_IsUnicode ? 2 : 1), 0))
-                ,   StrPut(Text, &BTNSTR, StrPut(Text) * 2)
-                    SendMessage, this.TB_ADDSTRING, 0, &BTNSTR,, % "ahk_id " this.tbHwnd
-                    Index := ErrorLevel
-                }
-                VarSetCapacity(TBBUTTON, 8 + (A_PtrSize * 3), 0)
-            ,   NumPut(Icon, TBBUTTON, 0, "Int")
-            ,   NumPut(ID, TBBUTTON, 4, "Int")
-            ,   NumPut(State, TBBUTTON, 8, "Char")
-            ,   NumPut(Style, TBBUTTON, 9, "Char")
-            ,   NumPut(Index, TBBUTTON, 8 + (A_PtrSize * 2), "Int")
-                SendMessage, this.TB_ADDBUTTONS, 1, &TBBUTTON,, % "ahk_id " this.tbHwnd
-            }
-            return (ErrorLevel = "FAIL") ? False : true
-        }
-;=======================================================================================
-;    Method:             Presets.Save
-;    Description:        Saves a buttons layout as a preset into the specified slot. 
-;    Parameters:
-;        Slot:           Number of the slot in which to save the layout. There is no
-;                            predefined limit of slots.
-;        Buttons:        Buttons array must be in a valid format. You can use the Export
-;                            Toolbar Method (not the Preset Method of the same name)
-;                            passing TRUE to the ArrayOut parameter to return a valid
-;                            array to be used with this method.
-;    Return:             TRUE if Buttons is an object, or FALSE otherwise.
-;=======================================================================================
-        Save(Slot, Buttons) {
-            If (IsObject(Buttons))
-            {
-                this[Slot] := Buttons
-                return true
-            }
-            Else
-                return False
-        }
-    }
-;=======================================================================================
-;    Private Class       This class is used internally.
-;=======================================================================================
-    Class Private {
-;=======================================================================================
-;    Private Properties
-;=======================================================================================
-        ; Messages
-        Static TB_ADDBUTTONS            := 0x0414
-        Static TB_ADDSTRING             := A_IsUnicode ? 0x044D : 0x041C
-        Static TB_AUTOSIZE              := 0x0421
-        Static TB_BUTTONCOUNT           := 0x0418
-        Static TB_CHECKBUTTON           := 0x0402
-        Static TB_COMMANDTOINDEX        := 0x0419
-        Static TB_CUSTOMIZE             := 0x041B
-        Static TB_DELETEBUTTON          := 0x0416
-        Static TB_ENABLEBUTTON          := 0x0401
-        Static TB_GETBUTTON             := 0x0417
-        Static TB_GETBUTTONSIZE         := 0x043A
-        Static TB_GETBUTTONTEXT         := A_IsUnicode ? 0x044B : 0x042D
-        Static TB_GETEXTENDEDSTYLE      := 0x0455
-        Static TB_GETHOTITEM            := 0x0447
-        Static TB_GETIMAGELIST          := 0x0431
-        Static TB_GETIMAGELISTCOUNT     := 0x0462
-        Static TB_GETITEMDROPDOWNRECT   := 0x0467
-        Static TB_GETITEMRECT           := 0x041D
-        Static TB_GETMAXSIZE            := 0x0453
-        Static TB_GETPADDING            := 0x0456
-        Static TB_GETRECT               := 0x0433
-        Static TB_GETROWS               := 0x0428
-        Static TB_GETSTATE              := 0x0412
-        Static TB_GETSTYLE              := 0x0439
-        Static TB_GETSTRING             := A_IsUnicode ? :0x045B 0x045C
-        Static TB_GETTEXTROWS           := 0x043D
-        Static TB_HIDEBUTTON            := 0x0404
-        Static TB_INDETERMINATE         := 0x0405
-        Static TB_INSERTBUTTON          := A_IsUnicode ? 0x0443 : 0x0415
-        Static TB_ISBUTTONCHECKED       := 0x040A
-        Static TB_ISBUTTONENABLED       := 0x0409
-        Static TB_ISBUTTONHIDDEN        := 0x040C
-        Static TB_ISBUTTONHIGHLIGHTED   := 0x040E
-        Static TB_ISBUTTONINDETERMINATE := 0x040D
-        Static TB_ISBUTTONPRESSED       := 0x040B
-        Static TB_MARKBUTTON            := 0x0406
-        Static TB_MOVEBUTTON            := 0x0452
-        Static TB_PRESSBUTTON           := 0x0403
-        Static TB_SETBUTTONINFO         := A_IsUnicode ? 0x0440 : 0x0442
-        Static TB_SETBUTTONSIZE         := 0x041F
-        Static TB_SETBUTTONWIDTH        := 0x043B
-        Static TB_SETDISABLEDIMAGELIST  := 0x0436
-        Static TB_SETEXTENDEDSTYLE      := 0x0454
-        Static TB_SETHOTIMAGELIST       := 0x0434
-        Static TB_SETHOTITEM            := 0x0448
-        Static TB_SETHOTITEM2           := 0x045E
-        Static TB_SETIMAGELIST          := 0x0430
-        Static TB_SETINDENT             := 0x042F
-        Static TB_SETLISTGAP            := 0x0460
-        Static TB_SETMAXTEXTROWS        := 0x043C
-        Static TB_SETPADDING            := 0x0457
-        Static TB_SETPRESSEDIMAGELIST   := 0x0468
-        Static TB_SETROWS               := 0x0427
-        Static TB_SETSTATE              := 0x0411
-        Static TB_SETSTYLE              := 0x0438
-        ; Styles
-        Static TBSTYLE_ALTDRAG      := 0x0400
-        Static TBSTYLE_CUSTOMERASE  := 0x2000
-        Static TBSTYLE_FLAT         := 0x0800
-        Static TBSTYLE_LIST         := 0x1000
-        Static TBSTYLE_REGISTERDROP := 0x4000
-        Static TBSTYLE_TOOLTIPS     := 0x0100
-        Static TBSTYLE_TRANSPARENT  := 0x8000
-        Static TBSTYLE_WRAPABLE     := 0x0200
-        Static TBSTYLE_ADJUSTABLE   := 0x20
-        Static TBSTYLE_BORDER       := 0x800000
-        Static TBSTYLE_THICKFRAME   := 0x40000
-        Static TBSTYLE_TABSTOP      := 0x10000
-        ; ExStyles
-        Static TBSTYLE_EX_DOUBLEBUFFER       := 0x80 ; // Double Buffer the toolbar
-        Static TBSTYLE_EX_DRAWDDARROWS       := 0x01
-        Static TBSTYLE_EX_HIDECLIPPEDBUTTONS := 0x10 ; // don't show partially obscured buttons
-        Static TBSTYLE_EX_MIXEDBUTTONS       := 0x08
-        Static TBSTYLE_EX_MULTICOLUMN        := 0x02 ; // Intended for internal use; not recommended for use in applications.
-        Static TBSTYLE_EX_VERTICAL           := 0x04 ; // Intended for internal use; not recommended for use in applications.
-        ; Button states
-        Static TBSTATE_CHECKED       := 0x01
-        Static TBSTATE_ELLIPSES      := 0x40
-        Static TBSTATE_ENABLED       := 0x04
-        Static TBSTATE_HIDDEN        := 0x08
-        Static TBSTATE_INDETERMINATE := 0x10
-        Static TBSTATE_MARKED        := 0x80
-        Static TBSTATE_PRESSED       := 0x02
-        Static TBSTATE_WRAP          := 0x20
-        ; Button styles
-        Static BTNS_BUTTON        := 0x00 ; TBSTYLE_BUTTON
-        Static BTNS_SEP           := 0x01 ; TBSTYLE_SEP
-        Static BTNS_CHECK         := 0x02 ; TBSTYLE_CHECK
-        Static BTNS_GROUP         := 0x04 ; TBSTYLE_GROUP
-        Static BTNS_CHECKGROUP    := 0x06 ; TBSTYLE_CHECKGROUP  // (TBSTYLE_GROUP | TBSTYLE_CHECK)
-        Static BTNS_DROPDOWN      := 0x08 ; TBSTYLE_DROPDOWN
-        Static BTNS_AUTOSIZE      := 0x10 ; TBSTYLE_AUTOSIZE    // automatically calculate the cx of the button
-        Static BTNS_NOPREFIX      := 0x20 ; TBSTYLE_NOPREFIX    // this button should not have accel prefix
-        Static BTNS_SHOWTEXT      := 0x40 ; // ignored unless TBSTYLE_EX_MIXEDBUTTONS is set
-        Static BTNS_WHOLEDROPDOWN := 0x80 ; // draw drop-down arrow, but without split arrow section
-        ; TB_GETBITMAPFLAGS
-        Static TBBF_LARGE   := 0x00000001
-        Static TBIF_BYINDEX := 0x80000000 ; // this specifies that the wparam in Get/SetButtonInfo is an index, not id
-        Static TBIF_COMMAND := 0x00000020
-        Static TBIF_IMAGE   := 0x00000001
-        Static TBIF_LPARAM  := 0x00000010
-        Static TBIF_SIZE    := 0x00000040
-        Static TBIF_STATE   := 0x00000004
-        Static TBIF_STYLE   := 0x00000008
-        Static TBIF_TEXT    := 0x00000002
-        ; Notifications
-        Static TBN_BEGINADJUST     := -703
-        Static TBN_BEGINDRAG       := -701
-        Static TBN_CUSTHELP        := -709
-        Static TBN_DELETINGBUTTON  := -715
-        Static TBN_DRAGOUT         := -714
-        Static TBN_DRAGOVER        := -727
-        Static TBN_DROPDOWN        := -710
-        Static TBN_DUPACCELERATOR  := -725
-        Static TBN_ENDADJUST       := -704
-        Static TBN_ENDDRAG         := -702
-        Static TBN_GETBUTTONINFO   := -720 ; A_IsUnicode ? -720 : -700
-        Static TBN_GETDISPINFO     := A_IsUnicode ? -717 : -716
-        Static TBN_GETINFOTIP      := A_IsUnicode ? -719 : -718
-        Static TBN_GETOBJECT       := -712
-        Static TBN_HOTITEMCHANGE   := -713
-        Static TBN_INITCUSTOMIZE   := -723
-        Static TBN_MAPACCELERATOR  := -728
-        Static TBN_QUERYDELETE     := -707
-        Static TBN_QUERYINSERT     := -706
-        Static TBN_RESET           := -705
-        Static TBN_RESTORE         := -721
-        Static TBN_SAVE            := -722
-        Static TBN_TOOLBARCHANGE   := -708
-        Static TBN_WRAPACCELERATOR := -726
-        Static TBN_WRAPHOTITEM     := -724
-;=======================================================================================
-;    Meta-Functions
-;
-;    Properties:
-;        tbHwnd:            Toolbar's Hwnd.
-;        DefaultBtnInfo:    Stores information about button's original structures.
-;        Presets:           This is a special object used to save and load buttons
-;                               layouts. It has its own methods.
-;=======================================================================================
-        __New(hToolbar) {
-            this.tbHwnd := hToolbar
-        ,   this.DefaultBtnInfo := []
-        ,   this.Presets := {tbHwnd: hToolbar, Base: Toolbar.tbPresets}
-        }
-;=======================================================================================
-        __Delete() {
-            this.RemoveAt(1, this.Length())
-        ,   this.SetCapacity(0)
-        ,   this.base := ""
-        }
-;=======================================================================================
-;    Private Methods
-;=======================================================================================
-;    Method:             SendMessage
-;    Description:        Sends a message to create or modify a button.
-;=======================================================================================
-        SendMessage(Button, Options, Message := "", Param := "") {
-            If (RegExMatch(Button, "^(\W?)(\w+)[=\s]?(.*)?:(\d+)\(?(.*?)?\)?$", Key))
-            {
-                idCommand := this.StringToNumber(Key2)
-            ,   iString := Key3, iBitmap := Key4
-            ,   this.Labels[idCommand] := Key2
-            ,   Struct := this.DefineBtnStruct(TBBUTTON, iBitmap, idCommand, iString, Key5 ? Key5 : Options)
-            ,   this.DefaultBtnInfo.Push(Struct)
-                If !(Key1) && (Message)
-                {
-                    SendMessage, Message, Param, &TBBUTTON,, % "ahk_id " this.tbHwnd
-                    If (ErrorLevel = "FAIL")
-                        return false
-                }
-            }
-            Else
-            {
-                Struct := this.BtnSep(TBBUTTON, Options), this.DefaultBtnInfo.Push(Struct)
-                If (Message)
-                {
-                    SendMessage, Message, Param, &TBBUTTON,, % "ahk_id " this.tbHwnd
-                    If (ErrorLevel = "FAIL")
-                        return false
-                }
-            }
-            return true
-        }
-;=======================================================================================
-;    Method:             DefineBtnStruct
-;    Description:        Creates a TBBUTTON structure.
-;    Return:             An array with the button structure values.
-;=======================================================================================
-        DefineBtnStruct(ByRef BtnVar, iBitmap := 0, idCommand := 0, iString := "", Options := "") {
-            If Options is Integer
-                tbStyle := Options, tbState := this.TBSTATE_ENABLED
-            Else
-            {
-                Loop, Parse, Options, %A_Space%%A_Tab%
-                {
-                    If (this[ "TBSTATE_" A_LoopField ])
-                        tbState += this[ "TBSTATE_" A_LoopField ]
-                    Else If (this[ "BTNS_" A_LoopField ] )
-                        tbStyle += this[ "BTNS_" A_LoopField ]
-                    Else If (RegExMatch(A_LoopField, "i)W(\d+)-(\d+)", MW))
-                    {
-                        Long := this.MakeLong(MW1, MW2)
-                        SendMessage, this.TB_SETBUTTONWIDTH, 0, Long,, % "ahk_id " this.tbHwnd
-                    }
-                }
-            }
-            If (iString != "")
-            {
-                VarSetCapacity(BTNSTR, (StrPut(iString) * (A_IsUnicode ? 2 : 1), 0))
-            ,   StrPut(iString, &BTNSTR, StrPut(iString) * 2)
-                SendMessage, this.TB_ADDSTRING, 0, &BTNSTR,, % "ahk_id " this.tbHwnd
-                StrIdx := ErrorLevel
-            }
-            Else
-                StrIdx := -1
-            VarSetCapacity(BtnVar, 8 + (A_PtrSize * 3), 0)
-        ,   NumPut(iBitmap-1, BtnVar, 0, "Int")
-        ,   NumPut(idCommand, BtnVar, 4, "Int")
-        ,   NumPut(tbState, BtnVar, 8, "Char")
-        ,   NumPut(tbStyle, BtnVar, 9, "Char")
-        ,   NumPut(StrIdx, BtnVar, 8 + (A_PtrSize * 2), "Ptr")
-            return {Icon: iBitmap-1, ID: idCommand, State: tbState
-                   , Style: tbStyle, Text: iString, Label: this.Labels[idCommand]}
-        }
-;=======================================================================================
-;    Method:             DefineBtnInfoStruct
-;    Description:        Creates a TBBUTTONINFO structure for a specific member.
-;=======================================================================================
-        DefineBtnInfoStruct(ByRef BtnVar, Member, ByRef Value) {
-            Static cbSize := 16 + (A_PtrSize * 4)
+    CustoEvents(ctl,p*) {
+        LV := ctl.gui["CustoList"], r := LV.GetNext()
+        If (!r And InStr(ctl.Name,"move"))
+            return
+        
+        If (ctl.Name = "MoveUp" Or ctl.Name = "MoveDown") {
+            If (r=1 And ctl.Name="MoveUp") Or (r=LV.GetCount() And ctl.Name="MoveDown")
+                return
+            newRow := (ctl.Name = "MoveUp") ? r-1 : r+1
+            this.SendMsg(this._MoveButton,r-1,newRow-1)
             
-            VarSetCapacity(BtnVar, cbSize, 0)
-        ,   NumPut(cbSize, BtnVar, 0, "UInt")
-            If (this[ "TBIF_" Member] )
-                dwMask := this[ "TBIF_" Member ]
-            ,   NumPut(dwMask, BtnVar, 4, "UInt")
-            If (dwMask = this.TBIF_COMMAND)
-                NumPut(Value, BtnVar, 8, "Int") ; idCommand
-            Else If (dwMask = this.TBIF_IMAGE)
-                Value := Value-1
-            ,   NumPut(Value, BtnVar, 12, "Int") ; iImage
-            Else If (dwMask = this.TBIF_STATE)
-                Value := (this[ "TBSTATE_" Value ]) ? this[ "TBSTATE_" Value ] : Value
-            ,   NumPut(Value, BtnVar, 16, "Char") ; fsState
-            Else If (dwMask = this.TBIF_STYLE)
-                Value := (this[ "BTNS_" Value ]) ? this[ "BTNS_" Value ] : Value
-            ,   NumPut(Value, BtnVar, 17, "Char") ; fsStyle
-            Else If (dwMask = this.TBIF_SIZE)
-                NumPut(Value, BtnVar, 18, "Short") ; cx
-            Else If (dwMask = this.TBIF_TEXT)
-                NumPut(&Value, BtnVar, 16 + (A_PtrSize * 2), "UPtr") ; pszText
-        }
-;=======================================================================================
-;    Method:             BtnSep
-;    Description:        Creates a TBBUTTON structure for a separator.
-;    Return:             An array with the button structure values.
-;=======================================================================================
-        BtnSep(ByRef BtnVar, Options := "") {
-            tbStyle := this.BTNS_SEP
-            Loop, Parse, Options, %A_Space%%A_Tab%
-            {
-                If (this[ "TBSTATE_" A_LoopField ])
-                    tbState += this[ "TBSTATE_" A_LoopField ]
+            LV.Delete()
+            btns := this.SaveNewLayout()
+            For i, b in btns {
+                c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
+                LV.Add("Icon" b.icon+1 c, (b.label) ? b.label : "Seperator")
+                If (i=newRow)
+                    LV.Modify(i,"Select")
             }
-            VarSetCapacity(BtnVar, 8 + (A_PtrSize * 3), 0)
-        ,   NumPut(tbState, BtnVar, 8, "Char")
-        ,   NumPut(tbStyle, BtnVar, 9, "Char")
-            return {Icon: -1, ID: "", State: tbState, Style: tbStyle, Text: "", Label: ""}
-        }
-;=======================================================================================
-;    Method:             StringToNumber
-;    Description:        Returns a number based on a string to be used as Command ID.
-;=======================================================================================
-        StringToNumber(String) {
-            Loop, Parse, String
-                Number += Asc(A_LoopField) + Number + SubStr(Number, -1)
-            return SubStr(Number, 1, 4)
-        }
-;=======================================================================================
-;    Method:             MakeLong
-;    Description:        Creates a LongWord from a LoWord and a HiWord.
-;=======================================================================================
-        MakeLong(LoWord, HiWord) {
-            return (HiWord << 16) | (LoWord & 0xffff)
-        }
-;=======================================================================================
-;    Method:             MakeLong
-;    Description:        Extracts LoWord and HiWord from a LongWord.
-;=======================================================================================
-        MakeShort(Long, ByRef LoWord, ByRef HiWord) {
-            LoWord := Long & 0xffff
-        ,   HiWord := Long >> 16
+        } Else If (ctl.Name = "Cancel") {
+            this.ClearButtons()
+            this.Add(this.btnsReset,false)
+            ctl.gui.Destroy()
+        } Else If (ctl.Name = "OK") {
+            this.IL_Destroy("Customizer")
+            ctl.gui.Destroy()
+        } Else If (ctl.Name = "AddSep") {
+            this.Insert([{label:""}],r)
+            LV.Modify(r,"Select")
+            btns := this.SaveNewLayout()
+            LV.Delete()
+            For i, b in btns {
+                c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
+                LV.Add("Icon" b.icon+1 c, (b.label) ? b.label : "Seperator")
+                If (i=r)
+                    LV.Modify(i,"Select")
+            }
+        } Else If (ctl.Name = "RemSep") {
+            If LV.GetText(r) != "Seperator"
+                return
+            this.SendMsg(this._DeleteButton, r-1)
+            btns := this.SaveNewLayout()
+            LV.Delete()
+            For i, b in btns {
+                c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
+                LV.Add("Icon" b.icon+1 c, (b.label) ? b.label : "Seperator")
+            }
+        } Else If (ctl.Name = "CustoList") {
+            item := p[1], checked := p[2]
+            
+            this.HideButton(item,!checked)
         }
     }
+    
+    class NMHDR {
+        hwnd := "", idFrom := "", code := ""
+    }
+    
+    class NMMOUSE {
+        dwItemSpec:="", dwItemData:="", pointX:="", pointY:="", lParam:=""
+    }
+    
+    class NMKEY {
+        nVKEY:="", uFlags:=""
+    }
+    Export() {
+        btns := this.SaveNewLayout(), a := []
+        For i, b in btns {
+            props := Map(), props.CaseSense := false
+            For prop, value in b.OwnProps()
+                props[prop] := value
+            a.InsertAt(i,props)
+        }
+        return a
+    }
+    Import(a) {
+        r := []
+        For i, btn in a {
+            b := {}
+            For prop, value in btn {
+                b.%prop% := value
+            }
+            r.InsertAt(A_Index,b)
+        }
+        this.Add(r,false)
+    }
+    ; BtnInfoDisplay(b) { ; idCmd, iImg, states, styles, width, txt
+        ; msg := "idCmd: " (b.HasProp("idCmd") ? b.idCmd : "") "`r`n"
+             ; . "iImg: " (b.HasProp("icon") ? b.icon : "") "`r`n"
+             ; . "states: " (b.HasProp("states") ? b.states : "") "`r`n"
+             ; . "styles: " (b.HasProp("styles") ? b.styles : "") "`r`n"
+             ; . "width: " (b.HasProp("width") ? b.width : "") "`r`n"
+             ; . "txt: " (b.HasProp("label") ? b.label : "") "`r`n"
+             ; . "iString: " (b.HasProp("iString") ? b.iString : "") "`r`n"
+       ; debug.msg("`r`n" msg)
+    ; }
 }
 
