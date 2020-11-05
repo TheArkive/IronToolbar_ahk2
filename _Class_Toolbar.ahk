@@ -6,8 +6,7 @@
 ;=======================================================================================
 ; Example
 ;=======================================================================================
-#Include TheArkive_Debug.ahk
-#Include _JXON.ahk
+#Include "*i TheArkive_Debug.ahk"
 
 Global g := "", tb := "", ILA_big, ILA_small
 
@@ -61,6 +60,7 @@ tb.Add([{label:"Button 1", icon:1}
        ,{label:""}
        ,{label:"Button 5", icon:5, styles:"Check CheckGroup"}
        ,{label:"Button 6", icon:6, styles:"Check CheckGroup"}
+       ,{label:""}
        ,{label:"Button 7", icon:7, styles:"Check"}])
 
 
@@ -85,17 +85,18 @@ tb.Add([{label:"Button 1", icon:1}
 ; See Static wm_n member for a full list of events.
 tbEvent(tb, lParam, dataObj) {
     char := (dataObj.char > 0) ? Chr(dataObj.char) : ""
+    
     If InStr(dataObj.event,"hot")
         g["Edit"].Value := "Hot Item:`r`n`r`n"
                          . "Event: " dataObj.event "`r`n"
-                         . "index / idCmd / label: " dataObj.index " / " dataObj.idCmd " / " dataObj.label "`r`n"
+                         . "index / idCmd / label / checked:`r`n    " dataObj.index " / " dataObj.idCmd " / " dataObj.label " / " dataObj.checked "`r`n`r`n"
                          . "old index / idCmd:     " dataObj.oldIndex " / " dataObj.oldIdCmd "`r`n`r`n"
                          . "flags: " dataObj.hoverFlags " / " Format("0x{:X}",dataObj.hoverFlagsInt) "`r`n"
                          . "RECT X/Y/W/H: " dataObj.dims.X " / " dataObj.dims.Y " / " dataObj.dims.W " / " dataObj.dims.H
     Else If InStr(dataObj.event,"drag")
         g["Edit"].Value := "Drag Info:`r`n`r`n"
                          . "Event: " dataObj.event "`r`n"
-                         . "index / idCmd / label: " dataObj.index " / " dataObj.idCmd " / " dataObj.label "`r`n"
+                         . "index / idCmd / label / checked:`r`n    " dataObj.index " / " dataObj.idCmd " / " dataObj.label " / " dataObj.checked "`r`n`r`n"
                          . "old index / idCmd:     " dataObj.oldIndex " / " dataObj.oldIdCmd "`r`n`r`n"
                          . "RECT X/Y/W/H: " dataObj.dims.X " / " dataObj.dims.Y " / " dataObj.dims.W " / " dataObj.dims.H
     Else If (dataObj.event = "char") Or (dataObj.event = "KeyDown")
@@ -103,7 +104,10 @@ tbEvent(tb, lParam, dataObj) {
                          . "Event: " dataObj.event "`r`n"
                          . "vKey: " dataObj.vKey "`r`n"
                          . "Char: " dataObj.char " / " char "`r`n"
-                         . "index / idCmd / label: " dataObj.index " / " dataObj.idCmd " / " dataObj.label "`r`n"
+                         . "index / idCmd / label / checked:`r`n    " dataObj.index " / " dataObj.idCmd " / " dataObj.label " / " dataObj.checked "`r`n`r`n"
+    
+    Else If (InStr(dataObj.event,"click")) ; Choose an event to filter by, and if needed, a specific button.
+        Msgbox dataObj.label " clicked."   ; You can identify buttons by idCmd, index, or label from dataObj.
 }
 
 guiEvents(ctl,info) {
@@ -136,7 +140,6 @@ guiEvents(ctl,info) {
         Msgbox "Exporting/Clearing the toolbar...."
         btnLayout := tb.Export()
         tb.ClearButtons()
-        Sleep 1000
         MsgBox "Now importing."
         tb.Import(btnLayout)
     }
@@ -148,7 +151,7 @@ GuiClose(g) {
 
 F1::tb.SetButtonSize(64,64)
 F2::tb.SetButtonSize(32,32)
-F3::msgbox tb.type
+F3::msgbox tb.IsChecked(7)
 
 ;=======================================================================================
 ; End Example
@@ -348,6 +351,12 @@ class Toolbar { ; extends Toolbar.Private {
          
         this.AutoSize(), this.reAddButton := true
     }
+    IsChecked(idx,int := false) {
+        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0)
+        r := this.SendMsg(this._GetButton,idx-1,TBBUTTON.ptr)
+        states := NumGet(TBBUTTON,8,"Char"), TBBUTTON := ""
+        return !!(states & Toolbar.states.Checked) ; only return 1 or 0
+    }
     Insert(b,idx) {
         a := this.AddConvert(b,true), b := a[1]
         TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size, 0)
@@ -453,13 +462,8 @@ class Toolbar { ; extends Toolbar.Private {
     GetButton(idx) {
         TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0), r := this.SendMsg(this._GetButton,idx-1,TBBUTTON.ptr)
         iImg := NumGet(TBBUTTON,"Int"), idCmd := NumGet(TBBUTTON,4,"UInt"), states := NumGet(TBBUTTON,8,"Char"), styles := NumGet(TBBUTTON,9,"Char")
-        iString := NumGet(TBBUTTON,((A_PtrSize=4)?16:24),"Ptr")
-        
-        ; str := BufferAlloc(64,0), dword := this.MakeLong(64,iString)
-        ; r := this.SendMsg(this._GetString,dword,str.ptr), txt := StrGet(str)
-        txt := this.GetButtonText(idCmd)
-        
-        return {index:idx, label:txt, icon:iImg, states:states, styles:styles, idCmd:idCmd, iString:iString}
+        iString := NumGet(TBBUTTON,((A_PtrSize=4)?16:24),"Ptr"), txt := this.GetButtonText(idx)
+        return {index:idx, label:txt, icon:iImg, states:states, styles:styles, checked:!!(states & Toolbar.states.Checked), idCmd:idCmd, iString:iString}
     }
     ; GetButtonInfo(idx, byIndex:=false) { ; need to turn this into SetButtonText()
         ; TBI := BufferAlloc(bSize:=(A_PtrSize=4)?32:48,0)
@@ -487,6 +491,7 @@ class Toolbar { ; extends Toolbar.Private {
         idCmd := NumGet(TBBUTTON,4,"UInt")
         
         tSize := this.SendMsg(this._GetButtonText, idCmd, 0) << 32 >> 32 ; needed for 32-bit compatibility
+        
         If (tSize = -1)
             return ""
         
@@ -518,7 +523,7 @@ class Toolbar { ; extends Toolbar.Private {
         return dims
     }
     CmdToIdx(idCmd) {
-        return this.SendMsg(this._CommandToIndex,idCmd)+1
+        return (this.SendMsg(this._CommandToIndex,idCmd)+1) << 32 >> 32
     }
     BtnCount() {
         return this.SendMsg(this._ButtonCount)
@@ -536,7 +541,7 @@ class Toolbar { ; extends Toolbar.Private {
             return
         
         o := {event:event, eventInt:this.NMHDR.code
-            , index:0, idCmd:0, label:"", dims:{x:0, y:0, w:0, h:0} ; data for clicked/hovered button | old: rect:{t:"", b:"", r:"", l:""}
+            , index:0, idCmd:0, label:"", checked:0, dims:{x:0, y:0, w:0, h:0} ; data for clicked/hovered button | old: rect:{t:"", b:"", r:"", l:""}
             , hoverFlags:"", hoverFlagsInt:0                        ; more specific hover data
             , vKey:-1, char:-1                                      ; when hovering + keystroke, these are populated
             , oldIndex:0, oldIdCmd:0, oldLabel:""}                  ; for initially dragged button, or previous hot item
@@ -549,10 +554,9 @@ class Toolbar { ; extends Toolbar.Private {
                 this.NMMOUSE.pointY := NumGet(lParam+Toolbar.NMHDR_size+(A_PtrSize * 2)+4,"UInt")
                 this.NMMOUSE.dwHitInfo := NumGet(lParam+Toolbar.NMHDR_size+(A_PtrSize * 2)+8,"UInt")
                 
-                b := this.GetButton(this.CmdToIdx(this.NMMOUSE.dwItemSpec)+1)
+                b := this.GetButton(this.CmdToIdx(this.NMMOUSE.dwItemSpec))
                 
                 o.idCmd := b.idCmd, o.index := b.index, o.label := b.label
-                return true
                 
             Case this.Char: ; https://docs.microsoft.com/en-us/windows/win32/controls/nm-char-toolbar
                 char := NumGet(lParam+Toolbar.NMHDR_size,"UInt")
@@ -631,7 +635,6 @@ class Toolbar { ; extends Toolbar.Private {
             Static RECT := BufferAlloc(16,0)
             r := this.SendMsg(this._GetRect,b.idCmd,RECT.ptr)
             L := NumGet(RECT,"Int"), T := NumGet(RECT,4,"Int"), R := NumGet(RECT,8,"Int"), B := NumGet(RECT,12,"Int")
-            ; o.rect := {L:L, T:T, R:R, B:B}
             o.dims := {x:L, y:T, w:(R-L), h:(B-T)}
         }
         
