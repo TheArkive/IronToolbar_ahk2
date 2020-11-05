@@ -1,5 +1,7 @@
 # IronToolbar for AHK
 
+<img src="images/preview.gif" />
+
 Why Iron?  Two reasons:
 1) This class script has turned out pretty solid and reliable.
 2) It was a struggle getting there, due to the Toolbar API's "iron will" to defy my attempts to make this not only accessible for AHK v2, but hopefully more accessible and usable if converted to AHK v1.
