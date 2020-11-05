@@ -292,6 +292,7 @@ String.  his is always "Toolbar".
 * Testing for icons larger than 32 x 32.
 * More testing with TB_SETBUTTONSIZE.
 * Attempt to support automatic toolbar wrapping on window resize (not currently supported with `easyMode` enabled).
+* Attempt to support Drop targets and TBN_GETOBJECT for drag-drop onto a toolbar.
 
 </details>
 

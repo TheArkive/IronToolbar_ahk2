@@ -13,8 +13,8 @@ Global g := "", tb := "", ILA_big, ILA_small
 
 g := Gui.New("","Toolbar Test"), g.OnEvent("close","GuiClose")
 tb := Toolbar.New(g,"vMyToolbar","Tooltips Flat DrawDDArrows Adjustable") ; Flat Tooltips Adjustable Wrapable Vert NoParentAlign NoResize
-tb.IL_Create("big",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130"],true) ; name, InitialCount, images array, large
-tb.IL_Create("small",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130"])
+tb.IL_Create("big",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"],true) ; name, InitialCount, images array, large
+tb.IL_Create("small",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"])
 tb.SetImageList("big")
 ; tb.easyMode := false ; this is pretty advanced, use only if you dare!
 
@@ -57,7 +57,11 @@ tb.Add([{label:"Button 1", icon:1}
        ,{label:""}
        ,{label:"Button 2", icon:2}
        ,{label:"Button 3", icon:3}
-       ,{label:"Button 4", icon:4, styles:"DropDown"}])
+       ,{label:"Button 4", icon:4, styles:"DropDown"}
+       ,{label:""}
+       ,{label:"Button 5", icon:5, styles:"Check CheckGroup"}
+       ,{label:"Button 6", icon:6, styles:"Check CheckGroup"}
+       ,{label:"Button 7", icon:7, styles:"Check"}])
 
 
 ; d props: {event:str, eventInt:int                                             ; event data
@@ -528,9 +532,6 @@ class Toolbar { ; extends Toolbar.Private {
         
         event := this.rlu(this.NMHDR.code,"wm_n") ; lookup event name
         
-        If InStr(event,"drag")
-            Debug.Msg(event)
-        
         If (this.NMHDR.code = 0 or this.NMHDR.code = "" Or event = "")
             return
         
@@ -599,7 +600,6 @@ class Toolbar { ; extends Toolbar.Private {
             
             Case this.GetButtonInfo: ; * customizer ; https://docs.microsoft.com/en-us/windows/win32/controls/tbn-getbuttoninfo
                 iItem := NumGet(lParam+Toolbar.NMHDR_size,"Int")
-                Debug.Msg("get btn info: " iItem)
                 If (iItem = this.BtnCount())
                     return false
                 
@@ -634,12 +634,6 @@ class Toolbar { ; extends Toolbar.Private {
             ; o.rect := {L:L, T:T, R:R, B:B}
             o.dims := {x:L, y:T, w:(R-L), h:(B-T)}
         }
-        
-        ; If (event = "char" or event = "keydown")
-            ; Debug.Msg("event: " event " / vKey: " o.vKey " / char: " o.char " / idCmd: " o.idCmd)
-        
-        ; If (InStr(event,"drag"))
-            ; Debug.Msg("event: " event " / idCmd: " o.idCmd " / oldIdCmd: " o.oldIdCmd " / label: " o.label)
         
         cb := this.callback
         If IsFunc(cb)
