@@ -149,9 +149,7 @@ GuiClose(g) {
     ExitApp
 }
 
-F1::tb.SetButtonSize(64,64)
-F2::tb.SetButtonSize(32,32)
-F3::msgbox tb.IsChecked(7)
+F1::MsgBox tb.GetButtonText(5)
 
 ;=======================================================================================
 ; End Example
@@ -217,10 +215,7 @@ class Toolbar { ; extends Toolbar.Private {
     ShowText := false, easyMode := true, pos:="top", exStyles := "", startStyles := "", counter := 1
     callback := "tbEvent", reAddButton := true, hotItem := 0, hotItemID := 0
     
-    firstAdd := false
-    
-    ImageLists := ""
-    IL_Default := "", IL_Hot := "", IL_Pressed := "", IL_Disabled := ""
+    ImageLists := "", IL_Default := "", IL_Hot := "", IL_Pressed := "", IL_Disabled := ""
     NMHDR:={}, NMMOUSE:={}, NMKEY:={}, btns := [], btnsBackup :=[]
     
     __New(in_gui:="", sOptions:="", Styles:="") {  ; TBSTYLE_FLAT     := 0x0800 Required to show separators as bars.
@@ -427,6 +422,7 @@ class Toolbar { ; extends Toolbar.Private {
                 statesTxt := RegExReplace(StrReplace(statesTxt,"Wrap"),"[ ]{2,}"," ")
             
             b.states := this.MakeFlags(statesTxt,"states")
+            b.icon -= 1
         }
         
         this.ClearButtons()
@@ -463,7 +459,7 @@ class Toolbar { ; extends Toolbar.Private {
         TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0), r := this.SendMsg(this._GetButton,idx-1,TBBUTTON.ptr)
         iImg := NumGet(TBBUTTON,"Int"), idCmd := NumGet(TBBUTTON,4,"UInt"), states := NumGet(TBBUTTON,8,"Char"), styles := NumGet(TBBUTTON,9,"Char")
         iString := NumGet(TBBUTTON,((A_PtrSize=4)?16:24),"Ptr"), txt := this.GetButtonText(idx)
-        return {index:idx, label:txt, icon:iImg, states:states, styles:styles, checked:!!(states & Toolbar.states.Checked), idCmd:idCmd, iString:iString}
+        return {index:idx, label:txt, icon:iImg+1, states:states, styles:styles, checked:!!(states & Toolbar.states.Checked), idCmd:idCmd, iString:iString}
     }
     ; GetButtonInfo(idx, byIndex:=false) { ; need to turn this into SetButtonText()
         ; TBI := BufferAlloc(bSize:=(A_PtrSize=4)?32:48,0)
@@ -728,7 +724,7 @@ class Toolbar { ; extends Toolbar.Private {
         
         For i, b in btns {
             c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
-            LV.Add("Icon" b.icon+1 c, (b.label) ? b.label : "Seperator")
+            LV.Add("Icon" b.icon c, (b.label) ? b.label : "Seperator")
         }
         custo.Add("Button","x+10 yp w100 vMoveUp","Move Up").OnEvent("click",events)
         custo.Add("Button","y+0 w100 vMoveDown","Move Down").OnEvent("click",events)
@@ -747,23 +743,21 @@ class Toolbar { ; extends Toolbar.Private {
     }
     CustoEvents(ctl,p*) {
         LV := ctl.gui["CustoList"], r := LV.GetNext()
-        If (!r And InStr(ctl.Name,"move"))
+        If (!r And (InStr(ctl.Name,"move") Or InStr(ctl.Name,"sep")))
             return
         
         If (ctl.Name = "MoveUp" Or ctl.Name = "MoveDown") {
             If (r=1 And ctl.Name="MoveUp") Or (r=LV.GetCount() And ctl.Name="MoveDown")
                 return
             newRow := (ctl.Name = "MoveUp") ? r-1 : r+1
+            
+            b := this.GetButton(r), LV.Delete(r)
+            c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
+            LV.Insert(newRow,"Select Icon" (b.icon) c, (b.label) ? b.label : "Seperator")
+            LV.Modify(newRow,"Vis")
+            
             this.SendMsg(this._MoveButton,r-1,newRow-1)
             
-            LV.Delete()
-            btns := this.SaveNewLayout()
-            For i, b in btns {
-                c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
-                LV.Add("Icon" b.icon+1 c, (b.label) ? b.label : "Seperator")
-                If (i=newRow)
-                    LV.Modify(i,"Select")
-            }
         } Else If (ctl.Name = "Cancel") {
             this.ClearButtons()
             this.Add(this.btnsReset,false)
@@ -774,27 +768,21 @@ class Toolbar { ; extends Toolbar.Private {
         } Else If (ctl.Name = "AddSep") {
             this.Insert([{label:""}],r)
             LV.Modify(r,"Select")
-            btns := this.SaveNewLayout()
-            LV.Delete()
-            For i, b in btns {
-                c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
-                LV.Add("Icon" b.icon+1 c, (b.label) ? b.label : "Seperator")
-                If (i=r)
-                    LV.Modify(i,"Select")
-            }
+            Loop LV.GetCount()
+                LV.Modify(A_Index,"-Select")
+            LV.Insert(r,"Select Icon0","Seperator")
         } Else If (ctl.Name = "RemSep") {
             If LV.GetText(r) != "Seperator"
                 return
             this.SendMsg(this._DeleteButton, r-1)
             btns := this.SaveNewLayout()
-            LV.Delete()
-            For i, b in btns {
-                c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
-                LV.Add("Icon" b.icon+1 c, (b.label) ? b.label : "Seperator")
-            }
+            LV.Delete(r)
+            ; For i, b in btns {
+                ; c := !(b.states & Toolbar.states.Hidden) ? " Check" : ""
+                ; LV.Add("Icon" b.icon c, (b.label) ? b.label : "Seperator")
+            ; }
         } Else If (ctl.Name = "CustoList") {
-            item := p[1], checked := p[2]
-            
+            item := p[1], checked := p.Has(2) ? p[2] : "" 
             this.HideButton(item,!checked)
         }
     }
