@@ -2,6 +2,11 @@
 
 <img src="images/preview.gif" />
 
+<details>
+<summary>Preview #2</summary>
+<img src="images/preview2.gif" />
+</details>
+
 Why Iron?  Two reasons:
 1) This class script has turned out pretty solid and reliable.
 2) It was a struggle getting there, due to the Toolbar API's "iron will" to defy my attempts to make this not only accessible for AHK v2, but hopefully more accessible and usable if converted to AHK v1.
@@ -18,13 +23,17 @@ For a minimalist example of usage, please see the included example.
 <summary>...</summary>
 
 ### Toolbar.New()
-Usage: `tb := Toolbar.New(gui, options, styles)`
+Usage: `tb := Toolbar.New(in_gui, sOptions, Styles, MixedBtns, EasyMode)`
 
 Creates a new toolbar.  Most styles are applied to toolbars automatically.
 
-* gui: A GUI object to attach the toolbar to.
-* options: A string of options, formatted the same as AHK GUI options.
-* styles: A string of Styles and ExStyles to apply to the toolbar.
+* in_gui: A GUI object to attach the toolbar to.
+* sOptions: A string of options, formatted the same as AHK GUI options.
+* Styles: A string of Styles and ExStyles to apply to the toolbar.
+* MixedBtns: Boolean, true by default.\
+By default, toolbar style "List" and ExStyle "MixedButtons" are automatically set so that the user can easily set a mix of text buttons, icon buttons, and buttons with icon and text.  Set this value to false to omit these styles.  This will allow you to use `tb.ShowText()` and `tb.HideText` to toggle button text, and the button text will be below all the buttons instead of to the right of the icon (which is what "List" style does).
+* EasyMode: Boolean, true by default.\
+Turning off Easy Mode automatically disables MixedBtns.  All automatic styles are disabled so you can control them manually.
 
 Toolbar Styles:
 
@@ -276,6 +285,10 @@ Pointer.  Stores the toolbar hwnd.
 
 String.  Stores the `vName` of the control if specified in options when calling `tb.New()`.
 
+### tb.txtSpacing
+
+Integer.  Stores the number of spaces to automatically add to the left of button text (label) when `easyMode` is enabled and when `icon:-1` is specified on button creation with `tb.Add()`.  For most non-fixed width fonts, 2 spaces should suffice.  The default value is 2.  Please see the example.
+
 ### tb.type
 
 String.  his is always "Toolbar".
@@ -297,3 +310,21 @@ String.  his is always "Toolbar".
 </details>
 
 Please let me know if you have any suggestions for different ways of handling things.  And please note that not using `easyMode` has not be thuroughly tested yet.
+
+## Easy Mode
+Please read the rest of the docs above and study the included script example for appropriate context, especially if you want to deviate from "easyMode".
+
+By default, `tb.easyMode := true` and will apply the following Styles/ExStyles automatically:
+* Flat Style (TBSTYLE_FLAT) - for toolbar\
+Makes separators appear as bars.
+* List Style (TBSTYLE_LIST) - for toolbar\
+Makes text appear to the right of the icon.
+* MixedButtons (TBSTYLE_EX_MIXEDBUTTONS) - for toolbar\
+Hides all button text, except for buttons that have the TBSTYLE_SHOWTEXT style.
+* AutoSize Style (TBSTYLE_AUTOSIZE) - for buttons\
+Causes the buttons with this style to automatically resize according to the displayed icon, text, and whether or not button text should be displayed.
+* ShowText Style (TBSTYLE_SHOWTEXT) - for buttons if `icon:-1` is specified on button creation\
+This is a shorthand in easy mode to create a text button with no icon.
+* Enabled State (TBSTATE_ENABED) - for buttons
+* Wrap State (TBSTATE_WRAP) for buttons / Vert Style (CSS_VERT) for toolbar if toolbar is oriented with LEFT or RIGHT\
+Orienting the toolbar with LEFT or RIGHT can be done by specifying "Left" or "Right" as one of the styles when calling `tb.New()`, or when calling `tb.Position(pos)` where `pos` is a string set to "Left" or "Right".  Conversely TBSTATE_WRAP and CSS_VERT are removed when calling `tb.Position(pos)` where `pos` is set to "Top" or "Bottom".

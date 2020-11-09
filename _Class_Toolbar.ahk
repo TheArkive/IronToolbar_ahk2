@@ -1,4 +1,4 @@
-﻿; AHK v2 32-bit
+﻿; AHK v2
 ;=======================================================================================
 ; Class Toolbar (ClassToolbarWindow32)
 ; based on Class Toolbar by Pulover [Rodolfo U. Batista] for AHK v1.1.23.01 (https://github.com/Pulover/Class_Toolbar)
@@ -11,13 +11,23 @@
 Global g := "", tb := "", ILA_big, ILA_small
 
 g := Gui.New("","Toolbar Test"), g.OnEvent("close","GuiClose")
-tb := Toolbar.New(g,"vMyToolbar","Tooltips Flat DrawDDArrows Adjustable") ; Flat Tooltips Adjustable Wrapable Vert NoParentAlign NoResize
-tb.IL_Create("big",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"],true) ; name, InitialCount, images array, large
-tb.IL_Create("small",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"])
-tb.SetImageList("big")
-; tb.easyMode := false ; this is pretty advanced, use only if you dare!
 
-g.Add("Button","x100 y70 w100 vTop","Top").OnEvent("click","guiEvents")
+; =============================================================================
+; Two different ways to use easyMode.  Don't use both at the same time.
+tb := Toolbar.New(g,"vMyToolbar","Tooltips DrawDDArrows") ; DrawDDArrows used with DropDown button style below for split button.
+; tb := Toolbar.New(g,"vMyToolbar","Tooltips DrawDDArrows",false) ; Disable mixed buttons.
+; =============================================================================
+; Hard Mode
+; tb := Toolbar.New(g,"vMyToolbar","List Flat MixedButtons Tooltips DrawDDArrows",,false) ; Example below is not written for hard mode.
+; =============================================================================
+; To use "Hard Mode", refer to the Static members at the top of the Toolbar class.  Use those property names for styles and states.
+; Pass those property names as text values in a single space-delimited string into sOptions when calling tb.New()
+
+tb.IL_Create("big",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"],true) ; big icons
+tb.IL_Create("small",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"]) ; small icons
+tb.SetImageList("big") ; set big icons first
+
+g.Add("Button","x120 y70 w100 vTop","Top").OnEvent("click","guiEvents")
 g.Add("Button","xp y+0 w50 vLeft","Left").OnEvent("click","guiEvents")
 g.Add("Button","x+0 w50 vRight","Right").OnEvent("click","guiEvents")
 g.Add("Button","xp-50 y+0 w100 vBottom","Bottom").OnEvent("click","guiEvents")
@@ -43,32 +53,34 @@ g.Add("Edit","x+0 w30 vHideNum Center",5)
 
 g.Add("Button","xs y+0 w65 vEnable","Enable").OnEvent("click","guiEvents")
 g.Add("Button","x+0 w65 vDisable","Disable").OnEvent("click","guiEvents")
-g.Add("Edit","x+0 w30 vEnableNum Center",4)
+g.Add("Edit","x+0 w30 vEnableNum Center",5)
 
-g.Add("Text","x100 y+60","Numbers indicate positions of`r`nbuttons/separators (not zero-based).")
+g.Add("Text","x120 y+60","Numbers indicate positions of`r`nbuttons/separators (not zero-based).")
 
-e := g.Add("Edit","x100 y+10 h150 w280 vEdit ReadOnly")
+e := g.Add("Edit","x120 y+10 h150 w280 vEdit ReadOnly")
 e.SetFont("","Consolas")
 
-g.Show("w500 h500")
+g.Show("w600 h500")
 
-tb.Add([{label:"Button 1", icon:1}
+tb.Add([{label:"Button 1", icon:-1} ; set icon:-1 to use a text button (automatically applies "ShowText" style)
+       ,{label:""}                  ; set label:"" and no other properties to use a separator
+       ,{label:"Button 2", icon:2, styles:"ShowText"} ; set icon index and "ShowText" style to have a button with icon and text
        ,{label:""}
-       ,{label:"Button 2", icon:2}
-       ,{label:"Button 3", icon:3}
-       ,{label:"Button 4", icon:4, styles:"DropDown"}
+       ,{label:"Button 3", icon:3, styles:"WholeDropDown"}  ; DropDown button with arrow NOT split from main button
+       ,{label:"Button 4", icon:4, styles:"DropDown"}       ; DropDown split button, requires DrawDDArrows style above
        ,{label:""}
-       ,{label:"Button 5", icon:5, styles:"Check CheckGroup"}
-       ,{label:"Button 6", icon:6, styles:"Check CheckGroup"}
+       ,{label:"Button 5", icon:5, styles:"Check CheckGroup"} ; index 8
+       ,{label:"Button 6", icon:6, styles:"Check CheckGroup"} ; index 9
        ,{label:""}
        ,{label:"Button 7", icon:7, styles:"Check"}])
 
 
-; d props: {event:str, eventInt:int                                             ; event data
-        ; , index:int, idCmd:int, label:str, dims:{x:int, y:int, w:int, h:int}  ; data for clicked/hovered button | old: rect:{t:"", b:"", r:"", l:""}
-        ; , hoverFlags:str, hoverFlagsInt:int                                   ; more specific hover data
-        ; , vKey:int, char:int                                                  ; when hovering + keystroke, these are populated
-        ; , oldIndex:int, oldIdCmd:int, oldLabel:str}                           ; for initially dragged button, or previous hot item
+; d props: {event:str, eventInt:int                         ; event data
+        ; , index:int, idCmd:int, label:str                 ; data for clicked/hovered button
+        ; , dims:{x:int, y:int, b:int, w:int, h:int}        ; button x/y/w/y, b = bottom of button y value
+        ; , hoverFlags:str, hoverFlagsInt:int               ; more specific hover data
+        ; , vKey:int, char:int                              ; when hovering + keystroke, these are populated
+        ; , oldIndex:int, oldIdCmd:int, oldLabel:str}       ; for initially dragged button, or previous hot item
            
 ; events: LClick, LDClick, LDown, RClick, RDClick   ; mouse click events
         ; Char, KeyDown                             ; hover + keystroke events
@@ -105,9 +117,11 @@ tbEvent(tb, lParam, dataObj) {
                          . "vKey: " dataObj.vKey "`r`n"
                          . "Char: " dataObj.char " / " char "`r`n"
                          . "index / idCmd / label / checked:`r`n    " dataObj.index " / " dataObj.idCmd " / " dataObj.label " / " dataObj.checked "`r`n`r`n"
+    Else If (dataObj.event = "DropDown")
+        msgbox "Drop arrow clicked on a split button, or DropDown button with WholeDropDown style clicked."
     
-    Else If (InStr(dataObj.event,"click")) ; Choose an event to filter by, and if needed, a specific button.
-        Msgbox dataObj.label " clicked."   ; You can identify buttons by idCmd, index, or label from dataObj.
+    ; Else If (InStr(dataObj.event,"click")) ; Choose an event to filter by, and if needed, a specific button.
+        ; Msgbox dataObj.label " clicked."   ; You can identify buttons by idCmd, index, or label from dataObj.
 }
 
 guiEvents(ctl,info) {
@@ -162,6 +176,7 @@ F1::MsgBox tb.GetButtonText(5)
 
 class Toolbar { ; extends Toolbar.Private {
     Static TBBUTTON_size := ((A_PtrSize = 4) ? 20 : 32), NMHDR_size := (A_PtrSize * 3)
+    Static txtSpacing := 2 ; Adds spaces in front of button text.  For forcing "center" on a toolbar button text with no icon.
     
     Static styles := {AltDrag:0x400       ; Toolbar Styles https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-control-and-button-styles
                     , CustomErase:0x2000, Flat:0x800, List:0x1000, RegisterDrop:0x4000, ToolTips:0x100, Transparent:0x8000, Wrapable:0x200
@@ -193,7 +208,7 @@ class Toolbar { ; extends Toolbar.Private {
                   , GetButtonInfo:((A_PtrSize=8)?-720:-700), GetDispInfo:((A_PtrSize=8)?-717:-716), GetInfoTip:((StrLen(Chr(0xFFFF)))?-719:-718)
                   
                   , Char:-18 ; NM_* events https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-notifications
-                  , CustomDraw:-12, KeyDown:-15, LDown:-20, ReleasedCapture:-16, ToolTipsCreated:-19, LClick:-2, LDClick:-3, RClick:-5, RDClick:-6}
+                  , CustomDraw:-12, KeyDown:-15, LDown:-20, ReleasedCapture:-16, ToolTipsCreated:-19, LClick:-2, LDClick:-3, RClick:-5, RDClick:-6, BN_CLICKED:2}
     
     Static messages := {_AddButtons:0x414 ; Toolbar Messages https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-messages
                       , _AddString:(StrLen(Chr(0xFFFF))?0x044D:0x041C), _AutoSize:0x421, _ButtonCount:0x418, _CheckButton:0x402, _CommandToIndex:0x419
@@ -205,21 +220,27 @@ class Toolbar { ; extends Toolbar.Private {
                       , _IsButtonHidden:0x40C, _IsButtonHighlighted:0x40E, _IsButtonIndeterminate:0x40D, _IsButtonPressed:0x40B, _MakeButton:0x406
                       , _MoveButton:0x452, _PressButton:0x403, _SetButtonInfo:(StrLen(Chr(0xFFFF))?0x0440:0x0442), _SetButtonSize:0x41F, _SetButtonWidth:0x43B
                       , _SetDisabledImageList:0x436, _SetExtendedStyle:0x454, _SetHotImageList:0x434, _SetHotItem:0x448, _SetHotItem2:0x45E
-                      , _SetImageList:0x430, _SetIndent:0x42F, _SetListGap:0x460, _SetMaxTextRows:0x43C, _SetPadding:0x457, _SetPressedImageList:0x468
+                      , _SetImageList:0x430, _SetIndent:0x42F, _SetListGap:0x460, _SetMaxTextRows:0x43C, _SetMetrics:0x466, _SetPadding:0x457, _SetPressedImageList:0x468
                       , _SetRows:0x427, _SetState:0x411, _SetStyle:0x438, _HitTest:0x445, _GetAnchorHighlight:0x44A, _SetAnchorHighlight:0x449}
     
     Static hotItemFlags := {Accelerator:0x4 ; https://docs.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-nmtbhotitem
                           , ArrowKeys:0x2, DupAccel:0x8, Entering:0x10, Leaving:0x20, LMouse:0x80, Mouse:0x1, Reselect:0x40, ToggleDropDown:0x100} ; Other:0x0
     
+    Static metrics := {Pad:0x1, BarPad:0x2, ButtonSpacing:0x4}
+    
     hwnd:=0, _gui:="", ctrl:="", Name:="", Type:="Toolbar"
-    ShowText := false, easyMode := true, pos:="top", exStyles := "", startStyles := "", counter := 1
+    ShowText := true, MixedBtns := true, easyMode := true, pos:="top", exStyles := "", startStyles := "", counter := 1
     callback := "tbEvent", reAddButton := true, hotItem := 0, hotItemID := 0
     
     ImageLists := "", IL_Default := "", IL_Hot := "", IL_Pressed := "", IL_Disabled := ""
     NMHDR:={}, NMMOUSE:={}, NMKEY:={}, btns := [], btnsBackup :=[]
     
-    __New(in_gui:="", sOptions:="", Styles:="") {  ; TBSTYLE_FLAT     := 0x0800 Required to show separators as bars.
-        _Styles := "", this.startStyles := Styles, this.ImageLists := Map(), this.ImageLists.CaseSense := false ; _exStyles := 0
+    __New(in_gui:="", sOptions:="", Styles:="", MixedBtns := true, EasyMode := true) {  ; TBSTYLE_FLAT     := 0x0800 Required to show separators as bars.
+        _Styles := "", this.startStyles := Styles, this.ImageLists := Map(), this.ImageLists.CaseSense := false, this.MixedBtns := MixedBtns
+        
+        this.easyMode := EasyMode
+        (!this.easyMode) ? this.MixedBtns := false : ""
+        
         Loop Parse Trim(Styles), " "
         {
             v := A_LoopField
@@ -239,6 +260,9 @@ class Toolbar { ; extends Toolbar.Private {
         If this.easyMode { ; final easy mode modifications
             (!InStr(Styles,"NoParentAlign")) ? (_Styles .= " " this.lu("NoParentAlign",true), this.startStyles .= " NoParentAlign") : ""
             (!InStr(Styles,"NoResize")) ? (_Styles .= " " this.lu("NoResize",true), this.startStyles .= " NoResize") : ""
+            (!InStr(Styles,"Flat")) ? (_Styles .= " " this.lu("Flat",true), this.startStyles .= " Flat") : ""
+            (MixedBtns And !InStr(Styles,"List")) ? (_Styles .= " " this.lu("List",true), this.startStyles .= " List") : ""
+            (MixedBtns And !InStr(Styles,"MixedButtons")) ? this.exStyles .= "MixedButtons " : ""
             this.startStyles := RegExReplace(this.startStyles,"i)(left|right|top|bottom)","")
             this.startStyles := Trim(RegExReplace(this.startStyles,"[ ]{2,}"," "))
             
@@ -246,17 +270,25 @@ class Toolbar { ; extends Toolbar.Private {
                 this.startStyles := RegExReplace(StrReplace(this.startStyles,prop,""),"[ ]{2,}"," ")
         }
         
+        ; wm_cmd := ObjBindMethod(this,"WM_COMMAND")
+        ; OnMessage 0x111, wm_cmd
+        
         this._gui := in_gui
         ctl := this._gui.Add("Custom","ClassToolbarWindow32 " sOptions " " _Styles)
         this.ctrl := ctl, this.hwnd := ctl.hwnd, this.Name := ctl.Name
         
-        For prop, value in Toolbar.wm_n.OwnProps() ; register callback for all events
+        For prop, value in Toolbar.wm_n.OwnProps() ; register callback for several WM_NOTIFY events
             this.ctrl.OnNotify(value,ObjBindMethod(this,"__tbNotify"))
         
         this.SendMsg(this._SetExtendedStyle, 0, this.MakeFlags(this.exStyles,"exStyles"))
         
         this.NMHDR := Toolbar.NMHDR.New(), this.NMMOUSE := Toolbar.NMMOUSE.New(), this.NMKEY := Toolbar.NMKEY.New() ; initialize structures
+        
+        ; this.SendMsg(this._SetButtonWidth,0,this.MakeLong(16,200))
     }
+    ; WM_COMMAND(wParam, lParam, msg, hwnd) {
+        ; Debug.Msg(wParam " / " lParam " / " msg " / " hwnd)
+    ; }
     __Get(key,p) {
         result := this.lu(key)
         If !result
@@ -313,19 +345,31 @@ class Toolbar { ; extends Toolbar.Private {
             (!b.HasProp("idCmd")) ? b.idCmd := 1000+(this.counter++) : ""       ; initial only
             
             If (initial And !sep) {
-                (initial And !b.HasProp("states")) ? b.states := "Enabled" : (initial And !InStr(b.states,"Enabled")) ? b.states .= " Enabled" : ""
+                (initial And !b.HasProp("states")) ? b.states := "Enabled" : ""
+                (initial And this.easyMode And !InStr(b.states,"Enabled")) ? b.states .= " Enabled" : ""
+                
                 (initial And Type(b.states)="String") ? b.states := this.MakeFlags(b.states,"states") : ""  ; initial only
                 
-                (initial And !b.HasProp("styles")) ? b.styles := "AutoSize" : (initial And !InStr(b.styles,"AutoSize")) ? b.styles .= " AutoSize" : ""
+                (initial And !b.HasProp("styles")) ? b.styles := "AutoSize" : ""
+                (initial And this.easyMode And !InStr(b.styles,"AutoSize")) ? b.styles .= " AutoSize" : ""
+                (initial And this.easyMode And this.MixedBtns And b.icon = -2 And !InStr(b.styles,"ShowText")) ? b.styles .= " ShowText" : ""
+                
                 (initial And Type(b.styles)="String") ? b.styles := this.MakeFlags(b.styles,"bStyles") : "" ; initial only
             } Else If (initial and sep)
                 b.styles := 1, b.states := 0
             
             (initial And !b.HasProp("iString")) ? b.iString := -1 : ""
+            (b.icon < 0) ? b.label := this.StrRpt(" ",Toolbar.txtSpacing) b.label : ""
             btnArray[i] := b
         }
         
         return btnArray
+    }
+    StrRpt(str,count) {
+        result := ""
+        Loop count
+            result .= str
+        return result
     }
     Add(btnArray, initial:=true) {
         If initial
@@ -531,7 +575,11 @@ class Toolbar { ; extends Toolbar.Private {
         this.NMHDR.idFrom := NumGet(lParam+A_PtrSize,"UInt")
         this.NMHDR.code   := NumGet(lParam+(A_PtrSize * 2),"Int") ; Technically a UINT / WM_NOTIFY msg code
         
+        ; If this.NMHDR.code = 0
+            ; msgbox "btn click"
+        
         event := this.rlu(this.NMHDR.code,"wm_n") ; lookup event name
+        ; Debug.Msg(event)
         
         If (this.NMHDR.code = 0 or this.NMHDR.code = "" Or event = "")
             return
@@ -631,7 +679,7 @@ class Toolbar { ; extends Toolbar.Private {
             Static RECT := BufferAlloc(16,0)
             r := this.SendMsg(this._GetRect,b.idCmd,RECT.ptr)
             L := NumGet(RECT,"Int"), T := NumGet(RECT,4,"Int"), R := NumGet(RECT,8,"Int"), B := NumGet(RECT,12,"Int")
-            o.dims := {x:L, y:T, w:(R-L), h:(B-T)}
+            o.dims := {x:L, y:T, b:B, w:(R-L), h:(B-T)}
         }
         
         cb := this.callback
