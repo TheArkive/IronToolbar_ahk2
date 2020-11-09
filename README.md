@@ -65,7 +65,8 @@ btnArray := [ { label:"str", icon:int, styles:"str", states:"str" }
 ```
 
 * label: Any string for button text.
-* icon: Image List index for which icon to use (not zero-based).
+* icon: Image List index for which icon to use (not zero-based).\
+Specify `icon:-1` to make a text-only button (without an icon).
 * styles: A space separated list of styles and exStyles to apply.
 * states: A space separated list of states to apply.
 
