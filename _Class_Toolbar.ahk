@@ -762,7 +762,7 @@ class Toolbar { ; extends Toolbar.Private {
         large := this.ImageLists[this.IL_Default].large, this.IL_Create("Customizer",files,large)
         
         events := ObjBindMethod(this,"CustoEvents")
-        custo := Gui.New("AlwaysOnTop -MinimizeBox -MaximizeBox Owner" g.hwnd,"Customizer")
+        custo := Gui.New("AlwaysOnTop -MinimizeBox -MaximizeBox Owner" this._gui.hwnd,"Customizer")
         LV := custo.Add("ListView","w200 h200 vCustoList Report Checked -hdr",["Icon List"])
         LV.OnEvent("ItemCheck",events)
         LV.ModifyCol(1,170)
