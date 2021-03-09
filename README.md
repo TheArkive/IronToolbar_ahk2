@@ -17,17 +17,13 @@ I designed this class around `tb.easyMode := true`.  EasyMode is on by default a
 
 For a minimalist example of usage, please see the included example.
 
-## Methods
+## Creating the Toolbar
 
-<details>
-<summary>...</summary>
-
-### Toolbar.New()
-Usage: `tb := Toolbar.New(in_gui, sOptions, Styles, MixedBtns, EasyMode)`
+Create the toolbar as follows:
+`tb := gui.AddToolbar(sOptions, Styles, MixedBtns:=true, EasyMode:=true)`
 
 Creates a new toolbar.  Most styles are applied to toolbars automatically.
 
-* in_gui: A GUI object to attach the toolbar to.
 * sOptions: A string of options, formatted the same as AHK GUI options.
 * Styles: A string of Styles and ExStyles to apply to the toolbar.
 * MixedBtns: Boolean, true by default.\
@@ -49,6 +45,11 @@ Adjustable, Bottom, Left, Right, Top, NoDivider, NoMoveX, NoMoveY, NoParentAlign
 [Toolbar ExStyles Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-extended-styles)\
 DoubleBuffer, DrawDDArrows, HideClippedButtons, MixedButtons\
 MultiColumn, Vertical (suggested to NOT use MultiColumn and Vertical)
+
+## Methods
+
+<details>
+<summary>...</summary>
 
 ### tb.Add(btn_array)
 
@@ -76,8 +77,8 @@ AutoSize, Button, Check, CheckGroup, DropDown, Group, NoPrefix, Sep, ShowText, W
 [Toolbar Button States Reference](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-button-states)\
 Checked, Ellipses, Enabled, Hidden, Marked, Pressed, Wrap, Grayed
 
-### tb.BtnCount()
-Usage: `tb.BtnCount()`
+### tb.Count()
+Usage: `result := tb.BtnCount()`
 
 Returns the number of elements in the toolbar (including separators).
 
@@ -117,27 +118,6 @@ Usage: `map := tb.Export()`
 Exports the current layout of the buttons.  States and styles are also preserved.  The output map is meant to be used with an object serializer in order to save it to disk.
 
 Recommended serializer: [JSON](https://www.autohotkey.com/boards/viewtopic.php?f=83&t=74799&sid=3c11c9a47a6500664963402ec9ccb082)
-
-### tb.GetButton()
-Usage: `tb.GetButton(idx)`
-
-This function returns a button object with the following properties:\
-`index, label, icon, states, styles, idCmd, iString`
-
-* idx: The 1-based index of the button to get.
-
-This method is not usually needed for simple useage, but can be used for advanced scripting.
-
-### tb.GetButtonDims()
-Usage: `dims := tb.GetButtonDims()`
-
-This returns the tallest button height and the widest button width, as well as the horizontal and vertical padding used in the toolbar.  The returned object contains the following properties:\
-`{w, h, hPad, vPad}`
-
-### tb.GetButtonText()
-Usage: `txt := tb.GetButtonText(idx)`
-
-* idx: The 1-based index of the button specifying the text to retrieve.
 
 ### tb.HideButton()
 Usage: `tb.HideButton(idx, status)`
@@ -180,7 +160,8 @@ EX: `[ { label:"str", icon:# } ]`
 Usage: `tb.MoveButton(idx, pos)`
 
 * idx: The 1-based index of the button to be moved.
-* pos: The 1-based index of the position to move the button to.
+* pos: The 1-based index of the position to move the button to.\
+Note that separators also have an index position.
 
 ### tb.OldCustomize()
 Usage: `tb.OldCustomize()`
@@ -220,21 +201,27 @@ Usage: `tb.ShowText(status)`
 <details>
 <summary>...</summary>
 
-If you specify `vName` in the options when using `tb.New()` then you can access some of the same properties available to most other AutoHotkey controls.  A few of these properties have been mimicked / duplicated for convenience as described below.
+In addition to all the usual properties of a GUI control, you also have the following properties you can access and modify:
 
 ### tb.callback
 
 String.  The default callback function is `tbEvent`.  You can change the name of the callback function by changing the value of this property.
 
+Changing the default callback:
 ```
-Default callback and parameters:
+tb := gui.AddToolbar(...)       ; create the control
+tb.callback := "my_callback"    ; change the name of the callback function
+```
 
+
+Default callback and parameters:
+```
 tbEvent(tb, lParam, dataObj) {
     ...
 }
 ```
 
-* tb: Toolbar object resulting from `tb.New()`
+* tb: Toolbar Gui Control object resulting from `gui.AddToolbar()`
 * lParam: Only provided for advanced usage.
 * dataObj: Contains lots of info regarding the specified event.
 
@@ -259,7 +246,7 @@ events: LClick, LDClick, LDown, RClick, RDClick
         DeletingButton
         HotItemChange
         
-        - These events fire but do not currently populate data in dataObj.
+        - The following events fire but do not currently populate data in dataObj.
         CustomDraw, DupAccelerator, GetDispInfo, GetObject, GetTipInfo, MapAccelerator
         ReleasedCapture, ToolTipsCreated, WrapAccelerator, WrapHotItem
 ```
@@ -268,7 +255,7 @@ NOTE:  A few events have been renamed for consistency, ie. `LClick` was original
 
 ### tb.easyMode
 
-Boolean.  This is `true` by default.  If you set this to `false` then all the automatic handling and sizing of the toolbar is disabled.  You will mostly need to use `tb.SendMsg()` in several manual contexts in order to manage the toolbar with easyMode disabled.
+Boolean.  This is `true` by default.  If you set this to `false` then all the automatic handling and sizing of the toolbar is disabled.  You will mostly need to use `tb.SendMsg()` in several manual contexts in order to manage the toolbar with easyMode disabled, but all the built-in methods will still work for basic management.
 
 ### tb.hotItem
 
@@ -284,15 +271,17 @@ Pointer.  Stores the toolbar hwnd.
 
 ### tb.name
 
-String.  Stores the `vName` of the control if specified in options when calling `tb.New()`.
+String.  Stores the `vName` of the control if specified in options when calling `gui.AddToolbar()`.
 
 ### tb.txtSpacing
 
-Integer.  Stores the number of spaces to automatically add to the left of button text (label) when `easyMode` is enabled and when `icon:-1` is specified on button creation with `tb.Add()`.  For most non-fixed width fonts, 2 spaces should suffice.  The default value is 2.  Please see the example.
+Integer.  Stores the number of spaces to automatically add to the left of button text (label) when `easyMode` is enabled and when `icon:-1` is specified on button creation with `tb.Add()` (which creates a text-only button, without icon).  For most non-fixed width fonts, 2 spaces should suffice.  The default value is 2.  Without adding these spaces, the button text (without an icon) would not appear centered and ends up left-aligned.
+
+Please see the example script.
 
 ### tb.type
 
-String.  his is always "Toolbar".
+String.  This is always "Toolbar".  It is suggested to use a `vName` in options when creating the Toolbar so you can identify the control by name as well.
 
 </details>
 
@@ -310,7 +299,7 @@ String.  his is always "Toolbar".
 
 </details>
 
-Please let me know if you have any suggestions for different ways of handling things.  And please note that not using `easyMode` has not be thuroughly tested yet.
+Please let me know if you have any suggestions for different ways of handling things.  And please note that setting `easyMode := false` has not been thuroughly tested yet.
 
 ## Easy Mode
 Please read the rest of the docs above and study the included script example for appropriate context, especially if you want to deviate from "easyMode".
@@ -328,4 +317,4 @@ Causes the buttons with this style to automatically resize according to the disp
 This is a shorthand in easy mode to create a text button with no icon.
 * Enabled State (TBSTATE_ENABED) - for buttons
 * Wrap State (TBSTATE_WRAP) for buttons / Vert Style (CSS_VERT) for toolbar if toolbar is oriented with LEFT or RIGHT\
-Orienting the toolbar with LEFT or RIGHT can be done by specifying "Left" or "Right" as one of the styles when calling `tb.New()`, or when calling `tb.Position(pos)` where `pos` is a string set to "Left" or "Right".  Conversely TBSTATE_WRAP and CSS_VERT are removed when calling `tb.Position(pos)` where `pos` is set to "Top" or "Bottom".
+Orienting the toolbar with LEFT or RIGHT can be done by specifying "Left" or "Right" as one of the styles when calling `gui.AddToolbar()`, or when calling `tb.Position(pos)` where `pos` is a string set to "Left" or "Right".  Conversely TBSTATE_WRAP and CSS_VERT are removed when calling `tb.Position(pos)` where `pos` is set to "Top" or "Bottom".

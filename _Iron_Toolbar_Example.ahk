@@ -1,13 +1,13 @@
 #Include "*i TheArkive_Debug.ahk"
-#Include _Iron_Ioolbar.ahk
+#Include _Iron_Toolbar.ahk
 
 Global g := "", tb := "", ILA_big, ILA_small
 
-g := Gui.New("","Toolbar Test"), g.OnEvent("close","GuiClose")
+g := Gui("","Toolbar Test"), g.OnEvent("close",GuiClose)
 
 ; =============================================================================
 ; Two different ways to use easyMode.  Don't use both at the same time.
-tb := Toolbar.New(g,"vMyToolbar","Tooltips DrawDDArrows") ; DrawDDArrows used with DropDown button style below for split button.
+tb := Toolbar(g,"vMyToolbar","Tooltips DrawDDArrows") ; DrawDDArrows used with DropDown button style below for split button.
 ; tb := Toolbar.New(g,"vMyToolbar","Tooltips DrawDDArrows",false) ; Disable mixed buttons.
 ; =============================================================================
 ; Hard Mode
@@ -18,34 +18,34 @@ tb := Toolbar.New(g,"vMyToolbar","Tooltips DrawDDArrows") ; DrawDDArrows used wi
 
 tb.IL_Create("big",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"],true) ; big icons
 tb.IL_Create("small",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"]) ; small icons
-tb.SetImageList("big") ; set big icons first
+r := tb.SetImageList("big") ; set big icons first
 
-g.Add("Button","x120 y70 w100 vTop","Top").OnEvent("click","guiEvents")
-g.Add("Button","xp y+0 w50 vLeft","Left").OnEvent("click","guiEvents")
-g.Add("Button","x+0 w50 vRight","Right").OnEvent("click","guiEvents")
-g.Add("Button","xp-50 y+0 w100 vBottom","Bottom").OnEvent("click","guiEvents")
-g.Add("Button","y+10 w100 vCustomize","Old Customizer").OnEvent("click","guiEvents")
-g.Add("Button","y+0 w100 vCustomizer","Customizer").OnEvent("click","guiEvents")
-g.Add("Button","y+10 w100 vExIm","Export / Import").OnEvent("click","guiEvents")
+g.Add("Button","x120 y70 w100 vTop","Top").OnEvent("click",guiEvents)
+g.Add("Button","xp y+0 w50 vLeft","Left").OnEvent("click",guiEvents)
+g.Add("Button","x+0 w50 vRight","Right").OnEvent("click",guiEvents)
+g.Add("Button","xp-50 y+0 w100 vBottom","Bottom").OnEvent("click",guiEvents)
+g.Add("Button","y+10 w100 vCustomize","Old Customizer").OnEvent("click",guiEvents)
+g.Add("Button","y+0 w100 vCustomizer","Customizer").OnEvent("click",guiEvents)
+g.Add("Button","y+10 w100 vExIm","Export / Import").OnEvent("click",guiEvents)
 
-g.Add("Button","x+20 y70 w50 vMove Section","Move").OnEvent("click","guiEvents")
+g.Add("Button","x+20 y70 w50 vMove Section","Move").OnEvent("click",guiEvents)
 g.Add("Text","x+2 yp+4","From:")
 g.Add("Edit","x+2 yp-4 w30 Center vMoveFrom","2")
 g.Add("Text","x+2 yp+4","To:")
 g.Add("Edit","x+2 yp-4 w30 Center vMoveTo","3")
 
-g.Add("Button","xs y+2 w80 vShowText Section","Show Text").OnEvent("click","guiEvents")
-g.Add("Button","x+0 w80 vHideText","Hide Text").OnEvent("click","guiEvents")
+g.Add("Button","xs y+2 w80 vShowText Section","Show Text").OnEvent("click",guiEvents)
+g.Add("Button","x+0 w80 vHideText","Hide Text").OnEvent("click",guiEvents)
 
-g.Add("Button","xs y+0 w80 vSmallIcons","Small Icons").OnEvent("click","guiEvents")
-g.Add("Button","x+0 w80 vLargeIcons","Large Icons").OnEvent("click","guiEvents")
+g.Add("Button","xs y+0 w80 vSmallIcons","Small Icons").OnEvent("click",guiEvents)
+g.Add("Button","x+0 w80 vLargeIcons","Large Icons").OnEvent("click",guiEvents)
 
-g.Add("Button","xs y+0 w65 vHide","Hide").OnEvent("click","guiEvents")
-g.Add("Button","x+0 w65 vShow","Show").OnEvent("click","guiEvents")
+g.Add("Button","xs y+0 w65 vHide","Hide").OnEvent("click",guiEvents)
+g.Add("Button","x+0 w65 vShow","Show").OnEvent("click",guiEvents)
 g.Add("Edit","x+0 w30 vHideNum Center",5)
 
-g.Add("Button","xs y+0 w65 vEnable","Enable").OnEvent("click","guiEvents")
-g.Add("Button","x+0 w65 vDisable","Disable").OnEvent("click","guiEvents")
+g.Add("Button","xs y+0 w65 vEnable","Enable").OnEvent("click",guiEvents)
+g.Add("Button","x+0 w65 vDisable","Disable").OnEvent("click",guiEvents)
 g.Add("Edit","x+0 w30 vEnableNum Center",5)
 
 g.Add("Text","x120 y+60","Numbers indicate positions of`r`nbuttons/separators (not zero-based).")
@@ -118,6 +118,7 @@ tbEvent(tb, lParam, dataObj) {
 }
 
 guiEvents(ctl,info) {
+    Global tb
     n := ctl.Name
     If (n="top" or n="left" or n="right" or n="bottom")
         tb.Position(n)

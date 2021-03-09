@@ -1,4 +1,5 @@
-﻿; AHK v2
+﻿;=======================================================================================
+; AHK v2
 ;=======================================================================================
 ; IronToolbar (ClassToolbarWindow32)
 ; based on Class Toolbar by Pulover [Rodolfo U. Batista] for AHK v1.1.23.01 (https://github.com/Pulover/Class_Toolbar)
@@ -60,14 +61,18 @@ class Toolbar { ; extends Toolbar.Private {
     
     Static metrics := {Pad:0x1, BarPad:0x2, ButtonSpacing:0x4}
     
+    NMHDR := {hwnd:"", idFrom:"", code:""}
+    NMMOUSE := {dwItemSpec:"", dwItemData:"", pointX:"", pointY:"", lParam:""}
+    NMKEY := {nVKEY:"", uFlags:""}
+    
     hwnd:=0, _gui:="", ctrl:="", Name:="", Type:="Toolbar"
-    ShowText := true, MixedBtns := true, easyMode := true, pos:="top", exStyles := "", startStyles := "", counter := 1
+    _ShowText := true, MixedBtns := true, easyMode := true, pos:="top", exStyles := "", startStyles := "", counter := 1
     callback := "tbEvent", reAddButton := true, hotItem := 0, hotItemID := 0
     
     ImageLists := "", IL_Default := "", IL_Hot := "", IL_Pressed := "", IL_Disabled := ""
-    NMHDR:={}, NMMOUSE:={}, NMKEY:={}, btns := [], btnsBackup :=[]
+    btns := [], btnsBackup :=[]
     
-    __New(in_gui:="", sOptions:="", Styles:="", MixedBtns := true, EasyMode := true) {  ; TBSTYLE_FLAT     := 0x0800 Required to show separators as bars.
+    __New(in_gui:="", sOptions:="", Styles:="", MixedBtns := true, EasyMode := true) {  ; TBSTYLE_FLAT := 0x0800 Required for separators as bars.
         _Styles := "", this.startStyles := Styles, this.ImageLists := Map(), this.ImageLists.CaseSense := false, this.MixedBtns := MixedBtns
         
         this.easyMode := EasyMode
@@ -105,6 +110,7 @@ class Toolbar { ; extends Toolbar.Private {
         ; wm_cmd := ObjBindMethod(this,"WM_COMMAND")
         ; OnMessage 0x111, wm_cmd
         
+        ; ===========================================================================
         this._gui := in_gui
         ctl := this._gui.Add("Custom","ClassToolbarWindow32 " sOptions " " _Styles)
         this.ctrl := ctl, this.hwnd := ctl.hwnd, this.Name := ctl.Name
@@ -113,9 +119,17 @@ class Toolbar { ; extends Toolbar.Private {
             this.ctrl.OnNotify(value,ObjBindMethod(this,"__tbNotify"))
         
         this.SendMsg(this._SetExtendedStyle, 0, this.MakeFlags(this.exStyles,"exStyles"))
+        ; ===========================================================================
+        ; ctl := in_gui.Add("Custom","ClassToolbarWindow32 " sOptions " " _Styles)
+        ; ===========================================================================
+        For prop, value in Toolbar.wm_n.OwnProps() ; register callback for several WM_NOTIFY events
+            ctl.OnNotify(value,ObjBindMethod(this,"__tbNotify"))
         
-        this.NMHDR := Toolbar.NMHDR.New(), this.NMMOUSE := Toolbar.NMMOUSE.New(), this.NMKEY := Toolbar.NMKEY.New() ; initialize structures
+        this.SendMsg(this._SetExtendedStyle, 0, this.MakeFlags(this.exStyles,"exStyles"))
         
+        
+        
+        return ctl
         ; this.SendMsg(this._SetButtonWidth,0,this.MakeLong(16,200))
     }
     ; WM_COMMAND(wParam, lParam, msg, hwnd) {
@@ -209,11 +223,12 @@ class Toolbar { ; extends Toolbar.Private {
         TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size * btnArray.Length, 0)
         offset := 0
         
-        For i, b in btnArray ; add buttons
+        For i, b in btnArray { ; add buttons
             this.Fill_TBBUTTON(TBBUTTON, offset, b.label, b.icon, b.idCmd, b.states, b.styles, b.iString), offset += Toolbar.TBBUTTON_size
+        }
         
         result := this.SendMsg(this._AddButtons, btnArray.Length, TBBUTTON.ptr)
-        this.SendMsg(this._SetMaxTextRows,this.ShowText ? 1 : 0) ; set text display mode
+        this.SendMsg(this._SetMaxTextRows,this._ShowText ? 1 : 0) ; set text display mode
         
         If (this.easyMode And initial) {
             this.Position(this.pos) ; position toolbar after button add?
@@ -271,7 +286,7 @@ class Toolbar { ; extends Toolbar.Private {
     Position(p:="", repeat:=false) {
         this.pos := p
         dims := this.GetButtonDims() ; bWidth, bHeight, hPad, vPad
-        this._gui.GetClientPos(,,w,h)
+        this._gui.GetClientPos(,,&w,&h)
         height := dims.h+2, width := dims.w+2
         
         If (p="right") {
@@ -305,7 +320,7 @@ class Toolbar { ; extends Toolbar.Private {
         this.Add(btns,false)
     }
     ShowText(status) {
-        this.ShowText := status
+        this._ShowText := status
         this.SendMsg(this._SetMaxTextRows,status)
         this.Position(this.pos) ; 2x redraws required for proper dimensions
         this.Position(this.pos)
@@ -390,7 +405,7 @@ class Toolbar { ; extends Toolbar.Private {
             bWidth := (bWidth < w) ? w : bWidth
             bHeight := (bHeight < h) ? h : bHeight
         }
-        padding := this.SendMsg(this._GetPadding, 0, 0), this.MakeShort(padding, hPad, vPad)
+        padding := this.SendMsg(this._GetPadding, 0, 0), this.MakeShort(padding, &hPad, &vPad)
         dims := {w:bWidth, h:bHeight, hPad:hPad, vPad:vPad}, TBI := "", _RECT := ""
         return dims
     }
@@ -514,9 +529,10 @@ class Toolbar { ; extends Toolbar.Private {
             o.dims := {x:L, y:T, b:B, w:(R-L), h:(B-T)}
         }
         
-        cb := this.callback
-        If IsFunc(cb)
-            %cb%(this, lParam, o)
+        cb := false
+        Try cb := (Type(%this.callback%) != "String") ? %this.callback% : false
+        If cb
+            cb(this, lParam, o)
     }
     SaveNewLayout() { ; works, but not keeping track of removed buttons yet
         btns := []
@@ -585,7 +601,7 @@ class Toolbar { ; extends Toolbar.Private {
         return (HiWord << 16) | (LoWord & 0xffff)
     }
     
-    MakeShort(Long, ByRef LoWord, ByRef HiWord) {
+    MakeShort(Long, &LoWord, &HiWord) {
         LoWord := Long & 0xffff,   HiWord := Long >> 16
     }
     
@@ -594,7 +610,7 @@ class Toolbar { ; extends Toolbar.Private {
         large := this.ImageLists[this.IL_Default].large, this.IL_Create("Customizer",files,large)
         
         events := ObjBindMethod(this,"CustoEvents")
-        custo := Gui.New("AlwaysOnTop -MinimizeBox -MaximizeBox Owner" this._gui.hwnd,"Customizer")
+        custo := Gui("AlwaysOnTop -MinimizeBox -MaximizeBox Owner" this._gui.hwnd,"Customizer")
         LV := custo.Add("ListView","w200 h200 vCustoList Report Checked -hdr",["Icon List"])
         LV.OnEvent("ItemCheck",events)
         LV.ModifyCol(1,170)
@@ -616,8 +632,8 @@ class Toolbar { ; extends Toolbar.Private {
         this.btnsReset := this.SaveNewLayout()
         
         custo.Show("hide")
-        this._gui.GetPos(x,y,w,h), cX := x+(w//2), cY := y+(h//2)
-        custo.GetPos(,,w,h)
+        this._gui.GetPos(&x,&y,&w,&h), cX := x+(w//2), cY := y+(h//2)
+        custo.GetPos(,,&w,&h)
         x := cX-(w//2), y := cY-(h//2)
         custo.Show("x" x " y" y)
     }
@@ -663,18 +679,6 @@ class Toolbar { ; extends Toolbar.Private {
             item := p[1], checked := p.Has(2) ? p[2] : "" 
             this.HideButton(item,!checked)
         }
-    }
-    
-    class NMHDR {
-        hwnd := "", idFrom := "", code := ""
-    }
-    
-    class NMMOUSE {
-        dwItemSpec:="", dwItemData:="", pointX:="", pointY:="", lParam:=""
-    }
-    
-    class NMKEY {
-        nVKEY:="", uFlags:=""
     }
     Export() {
         btns := this.SaveNewLayout(), a := []
