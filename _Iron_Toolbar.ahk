@@ -743,10 +743,10 @@ class Toolbar { ; extends Toolbar.Private {
             _ctl.SendMsg(this._MoveButton, r-1, newRow-1)
             
         } Else If (ctl.Name = "Cancel") {
-            this.ClearButtons()
+            _ctl.ClearButtons()
             For i, b in ctl.gui.btnsReset
                 ctl.gui.btnsReset[A_Index].icon -= 1
-            this.Add(ctl.gui.btnsReset,false)
+            _ctl.Add(ctl.gui.btnsReset,false)
             ctl.gui.Destroy()
         } Else If (ctl.Name = "OK") {
             _ctl.IL_Destroy("Customizer")
