@@ -1,13 +1,18 @@
 #Include "*i TheArkive_Debug.ahk"
 #Include _Iron_Toolbar.ahk
+#Include _JXON.ahk
 
-Global g := "", tb := "", ILA_big, ILA_small
+Global g := ""
 
-g := Gui("","Toolbar Test"), g.OnEvent("close",GuiClose)
+g := Gui("","Toolbar Test")
+g.OnEvent("close",GuiClose)
 
 ; =============================================================================
 ; Two different ways to use easyMode.  Don't use both at the same time.
-tb := Toolbar(g,"vMyToolbar","Tooltips DrawDDArrows") ; DrawDDArrows used with DropDown button style below for split button.
+
+tb := g.AddToolbar("vMyToolbar", "Tooltips DrawDDArrows") ; DrawDDArrows used with DropDown button style below for split button.
+; msgbox tb.Type ; returns Toolbar
+
 ; tb := Toolbar.New(g,"vMyToolbar","Tooltips DrawDDArrows",false) ; Disable mixed buttons.
 ; =============================================================================
 ; Hard Mode
@@ -16,9 +21,23 @@ tb := Toolbar(g,"vMyToolbar","Tooltips DrawDDArrows") ; DrawDDArrows used with D
 ; To use "Hard Mode", refer to the Static members at the top of the Toolbar class.  Use those property names for styles and states.
 ; Pass those property names as text values in a single space-delimited string into sOptions when calling tb.New()
 
-tb.IL_Create("big",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"],true) ; big icons
-tb.IL_Create("small",["shell32.dll/127","shell32.dll/126","shell32.dll/129","shell32.dll/130","shell32.dll/131","shell32.dll/132","shell32.dll/133"]) ; small icons
-r := tb.SetImageList("big") ; set big icons first
+IL1 := tb.IL_Create("big",["shell32.dll/127"
+                          ,"shell32.dll/126"
+                          ,"shell32.dll/129"
+                          ,"shell32.dll/130"
+                          ,"shell32.dll/131"
+                          ,"shell32.dll/132"
+                          ,"shell32.dll/133"],true) ; big icons
+                          
+IL2 := tb.IL_Create("small",["shell32.dll/127"
+                            ,"shell32.dll/126"
+                            ,"shell32.dll/129"
+                            ,"shell32.dll/130"
+                            ,"shell32.dll/131"
+                            ,"shell32.dll/132"
+                            ,"shell32.dll/133"]) ; small icons
+                            
+IL3 := tb.SetImageList("big") ; set big icons first
 
 g.Add("Button","x120 y70 w100 vTop","Top").OnEvent("click",guiEvents)
 g.Add("Button","xp y+0 w50 vLeft","Left").OnEvent("click",guiEvents)
@@ -88,7 +107,7 @@ tb.Add([{label:"Button 1", icon:-1} ; set icon:-1 to use a text button (automati
         ; CustomDraw, DupAccelerator, GetDispInfo, GetObject, GetTipInfo, MapAccelerator, ReleasedCapture, ToolTipsCreated, WrapAccelerator, WrapHotItem
 
 ; See Static wm_n member for a full list of events.
-tbEvent(tb, lParam, dataObj) {
+tbEvent(tb, lParam, dataObj) { ; use tb.name to filter if you have multiple toolbars
     char := (dataObj.char > 0) ? Chr(dataObj.char) : ""
     
     If InStr(dataObj.event,"hot")
@@ -118,7 +137,7 @@ tbEvent(tb, lParam, dataObj) {
 }
 
 guiEvents(ctl,info) {
-    Global tb
+    tb := ctl.gui["MyToolbar"]
     n := ctl.Name
     If (n="top" or n="left" or n="right" or n="bottom")
         tb.Position(n)
