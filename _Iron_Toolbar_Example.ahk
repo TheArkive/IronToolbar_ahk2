@@ -1,6 +1,5 @@
 #Include "*i TheArkive_Debug.ahk"
 #Include _Iron_Toolbar.ahk
-#Include _JXON.ahk
 
 Global g := ""
 
