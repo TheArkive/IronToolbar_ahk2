@@ -304,12 +304,17 @@ In addition to all the usual properties of a GUI control, you also have the foll
 
 ### tb.callback
 
-String.  The default callback function is `tbEvent`.  You can change the name of the callback function by changing the value of this property.
+Function object.  The default callback function is `tbEvent`.  When a Toolbar is created, the creation function will attempt only once to resolve the string-name of the function to a Func object.  Any future changes to the callback should be of type Func, BoundFunc, or a Class with a Call() method.
 
 Changing the default callback:
 ```
-tb := gui.AddToolbar(...)       ; create the control
-tb.callback := "my_callback"    ; change the name of the callback function
+tb := gui.AddToolbar(...)       ; Create the control.
+tb.callback := my_callback      ; Set the Function object used for the Toolbar callback.  Set per toolbar.
+                                ; Note, the callback func name is NOT quoted.
+
+my_callback(...) {              ; User defined function.
+                                ; See AHK v2 help on Function objects for more info. 
+}
 ```
 
 Default callback and parameters:
@@ -441,12 +446,13 @@ This is added to every button by default.  If you want to save/restore all state
 This is set to all toolbar elements when the toolbar orientation is set to RIGHT or LEFT with `tb.Position()`, or when specifying LEFT or RIGHT as a style when calling `Gui.AddToolbar()`.  When toolbar orientation is changed to TOP or BOTTOM, this style is automatically removed from all toolbar elements.
 
 ## Automatic Toolbar Sizing
-To automatically ensure your toolbar(s) are automatically sized or positioned in any orientation, simply use `Gui.OnEvent()` to bind a callback function to the "size" event, and add `Toolbar.SizeToolbars(w, h)` to that sizing callback function.
+To automatically ensure your toolbar(s) are automatically sized or positioned in any orientation, simply use `Gui.OnEvent()` to bind a callback function to the "size" event, and add `Toolbar.SizeToolbar(tb, w, h)` to that sizing callback function.
 
-This is not required.  You can still control the sizing of the toolbar manually.  In this case you will want to make use of `tb.GetRows()` when you have the Wrapable style set.  You will also want to use `tb.h` and `tb.w` depending on the orientation of your toolbar (top, bottom, left, right).
+This is not required.  You can still control the sizing of the toolbar manually.  In this case you will want to make use of `tb.GetRows()` when you have the Wrapable style set with a horizontal toolbar.  You will also want to use `tb.h` and `tb.w` depending on the orientation of your toolbar (top, bottom, left, right).
 
 ```
-GuiSize(gui, MinMax, w, h) { 
-    Toolbar.SizeToolbars(w, h)
+GuiSize(gui, MinMax, w, h) {
+    tb := gui["MyToolbar"]          ; Per toolbar, for fully docked in
+    Toolbar.SizeToolbar(tb, w, h)   ; top/bottom/left/right orientation only.
 }
 ```

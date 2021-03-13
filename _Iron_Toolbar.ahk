@@ -87,7 +87,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
         Gui.prototype.AddToolbar := ObjBindMethod(this,"AddToolbar")    ; Multiple gui subclass extensions don't play well together.
     }
     
-    Static AddToolbar(in_gui:="", sOptions:="", Styles:="", MixedBtns := true, EasyMode := true) { ; TBSTYLE_FLAT := 0x0800 separators as bars.
+    Static AddToolbar(in_gui:="", sOptions:="", Styles:="", MixedBtns := true, EasyMode := true) {
         _Styles := "", startStyles := "", pos := "top", exStyles := "", ShowTextStatus := false
         
         (!easyMode) ? MixedBtns := false : ""
@@ -154,6 +154,12 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
             ; this.size_cb_set := true
         ; }
         
+        _cb := false
+        Try _cb := %ctl.callback%
+        If (Type(_cb)="Func" Or Type(_cb)="BoundFunc" Or Type(_cb)="Class")
+            ctl.callback := _cb ; resolve string-based callback only once
+        Else ctl.callback := false
+        
         (ShowTextStatus) ? ctl.ShowText(true) : ""
         
         return ctl
@@ -163,19 +169,16 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
         return Format("0x{:X}",_in)
     }
     
-    Static SizeToolbars(w, h) {
-        For i, tbo in this.TbList {
-            rows := tbo.GetRows()
-            
-            If (tbo.pos = "top")
-                tbo.Move(,, w, rows * tbo.h)
-            Else If (tbo.pos = "bottom")
-                tbo.Move(, h - (rows * tbo.h), w, rows * tbo.h)
-            Else If (tbo.pos = "left")
-                tb.Move(,,, h)
-            Else If (tbo.pos = "right")
-                tb.Move(w-tbo.w,,,h)
-        }
+    Static SizeToolbar(tbo, w, h) {
+        rows := tbo.GetRows()
+        If (tbo.pos = "top")
+            tbo.Move(,, w, rows * tbo.h)
+        Else If (tbo.pos = "bottom")
+            tbo.Move(, h - (rows * tbo.h), w, rows * tbo.h)
+        Else If (tbo.pos = "left")
+            tb.Move(,,, h)
+        Else If (tbo.pos = "right")
+            tb.Move(w-tbo.w,,,h)
     }
     
     ; WM_COMMAND(wParam, lParam, msg, hwnd) {
@@ -874,10 +877,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
             o.dims := {x:L, y:T, b:B, w:(R-L), h:(B-T)}
         }
         
-        cb := false
-        Try cb := (Type(%ctl.callback%) != "String") ? %ctl.callback% : false
-        If cb                   ; This doesn't seem to cause performance issues.
-            cb(ctl, lParam, o)  ; Reevaluating this every time allows the user to change the callback on demand.
+        (cb := ctl.callback) ? cb(ctl, lParam, o) : ""
     }
 }
 

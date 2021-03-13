@@ -213,8 +213,8 @@ tbEvent(tb, lParam, dataObj) { ; use tb.name to filter if you have multiple tool
     If InStr(dataObj.event,"hot")
         g["Edit"].Value := tb.name " / Hot Item:`r`n`r`n"
                          . "Event: " dataObj.event "`r`n"
-                         . "index / idCmd / label / checked:`r`n    " 
-                         . dataObj.index " / " dataObj.idCmd " / " dataObj.label " / " dataObj.checked "`r`n`r`n"
+                         . "index / idCmd /   label  / checked:`r`n" 
+                         . "  " dataObj.index "   / " dataObj.idCmd "  / " dataObj.label " /    " dataObj.checked "`r`n`r`n"
                          . "old index / idCmd:     " dataObj.oldIndex " / " dataObj.oldIdCmd "`r`n`r`n"
                          . "flags: " dataObj.hoverFlags " / " Format("0x{:X}",dataObj.hoverFlagsInt) "`r`n"
                          . "RECT X/Y/W/H: " dataObj.dims.X " / " dataObj.dims.Y " / " dataObj.dims.W " / " dataObj.dims.H
@@ -296,7 +296,10 @@ GuiClose(g) {
 }
 
 GuiSize(gui, MinMax, _w, _h) {  ; Resize/move toolbar on window resize.
-    Toolbar.SizeToolbars(_w,_h) ; <--- The easy way to make sure your toolbars stay docked where they should.
-}                               ; This works regardless of what position the toolbar is in:  top, bottom, left, right.
-                                ; This also works when the toolbar automatically wraps on resize (requires Wrapable style).
+    tb := gui["MyToolbar"]
+    tb2 := gui["MyToolbar2"]
+    Toolbar.SizeToolbar(tb2, _w, _h)   ; <--- The easy way to make sure your toolbars stay docked where they should.
+    Toolbar.SizeToolbar(tb, _w,_h)     ; This works regardless of what position the toolbar is in:  top, bottom, left, right.
+}                                      ; Per-Toolbar usage is useful if you want a vertical toolbar in the middle of the GUI
+                                       ; as a sort of separator.  In this case you will need to manually control the resizing.
 
