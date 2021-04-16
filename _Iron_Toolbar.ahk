@@ -360,7 +360,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     
     IL_Add(ILname, icons) { ; append icons to an existing imagelist
         If !this.ImageLists.Has(ILname)
-            throw Exception("Image list name doesn't exist: " ILname)
+            throw Error("Image list name doesn't exist: " ILname)
         handle := this.ImageLists[ILname]
         For i, o in icons {
             a := StrSplit(o,"/"), img := a[1], icon := (a.Has(2)) ? a[2] : ""
@@ -549,7 +549,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     Static AddConvert(ctl,btnArray,initial) {   ; for internal use only
         For i, b in btnArray {                  ; prop list: label, icon, idCmd, styles, states, iString
             If !b.HasProp("label")
-                throw Exception("Button data must contain a label property.")
+                throw Error("Button data must contain a label property.")
             
             (b.label="") ? sep := true : sep := false
             (!b.HasProp("icon")) ? b.icon := 0 : b.icon -= 1
@@ -721,7 +721,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
         Loop Parse Trim(sInput), " "
         {
             If IsInteger(A_LoopField)
-                throw Exception("No numeric property: " member " / Value: " A_LoopField)
+                throw Error("No numeric property: " member " / Value: " A_LoopField)
             If !A_LoopField
                 Continue
             
