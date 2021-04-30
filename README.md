@@ -51,11 +51,11 @@ MultiColumn, Vertical (suggested to NOT use MultiColumn and Vertical)
 ## Methods
 
 <details>
-<summary>...</summary>
+<summary style="font-size:9">Click here to toggle</summary>
 
-### tb.Add(btn_array)
+### tb.Add()
 
-Usage: `tb.Add([btn_array])`
+Usage: `tb.Add( [ {btn_obj}, {btn_obj}, ... ] )`
 
 Adds buttons and separators to the toolbar.  When adding a separator, you only need to specify `{label:""}`.  Other buttons can be specified with nothing more than specifying `{label:"txt", icon:#}`, unless you want to add the other types of buttons that toolbar supports (ie. DropDown button, Check button, etc).  In this case you would need to specify all necessary `styles` and `states` to get the button and behavior you want.  See the example for how to create check buttons, and DropDown buttons with a menu.
 
@@ -298,7 +298,7 @@ Usage: `tb.ShowText(status)`
 ## Properties
 
 <details>
-<summary>...</summary>
+<summary style="font-size:9">Click here to toggle</summary>
 
 In addition to all the usual properties of a GUI control, you also have the following properties you can access and modify:
 
@@ -410,7 +410,7 @@ String.  This is always "Toolbar".
 ## To-Do List:
 
 <details>
-<summary>...</summary>
+<summary style="font-size:9">Click here to toggle</summary>
 
 * Implement `CreateWindowEx()` to be able to add non-toolbar controls.  This will likely be in a separate class extension.
 * Testing for icons larger than 32 x 32.
@@ -446,7 +446,7 @@ This is added to every button by default.  If you want to save/restore all state
 This is set to all toolbar elements when the toolbar orientation is set to RIGHT or LEFT with `tb.Position()`, or when specifying LEFT or RIGHT as a style when calling `Gui.AddToolbar()`.  When toolbar orientation is changed to TOP or BOTTOM, this style is automatically removed from all toolbar elements.
 
 ## Automatic Toolbar Sizing
-To automatically ensure your toolbar(s) are automatically sized or positioned in any orientation, simply use `Gui.OnEvent()` to bind a callback function to the "size" event, and add `Toolbar.SizeToolbar(tb, w, h)` to that sizing callback function.
+To ensure your toolbar(s) are automatically sized or positioned in any orientation, simply use `Gui.OnEvent()` to bind a callback function to the "size" event, and add `Toolbar.SizeToolbar(tb, w, h)` to that sizing callback function.
 
 This is not required.  You can still control the sizing of the toolbar manually.  In this case you will want to make use of `tb.GetRows()` when you have the Wrapable style set with a horizontal toolbar.  You will also want to use `tb.h` and `tb.w` depending on the orientation of your toolbar (top, bottom, left, right).
 
