@@ -4,7 +4,7 @@
 
 <details>
 <summary>Preview #2</summary>
-<img src="images/preview2.gif">
+<img src="images/preview_2.gif">
 </details>
 
 Why Iron?  Two reasons:
