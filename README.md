@@ -4,7 +4,7 @@
 
 <details>
 <summary>Preview #2</summary>
-<img src="images/Preview2.gif" />
+<img src="images/preview2.gif" />
 </details>
 
 Why Iron?  Two reasons:
@@ -49,9 +49,6 @@ DoubleBuffer, DrawDDArrows, HideClippedButtons, MixedButtons\
 MultiColumn, Vertical (suggested to NOT use MultiColumn and Vertical)
 
 ## Methods
-
-<details>
-<summary style="font-size:9">Click here to toggle</summary>
 
 ### tb.Add()
 
@@ -293,12 +290,7 @@ Usage: `tb.ShowText(status)`
 
 * status:  TRUE or FALSE.  TRUE to show text, FALSE to hide text.
 
-</details>
-
 ## Properties
-
-<details>
-<summary style="font-size:9">Click here to toggle</summary>
 
 In addition to all the usual properties of a GUI control, you also have the following properties you can access and modify:
 
@@ -405,18 +397,11 @@ Please see the example script.
 
 String.  This is always "Toolbar".
 
-</details>
-
 ## To-Do List:
-
-<details>
-<summary style="font-size:9">Click here to toggle</summary>
 
 * Implement `CreateWindowEx()` to be able to add non-toolbar controls.  This will likely be in a separate class extension.
 * Testing for icons larger than 32 x 32.
 * Attempt to support Drop targets and TBN_GETOBJECT for drag-drop onto a toolbar.
-
-</details>
 
 Please let me know if you have any suggestions for different ways of handling things.  Setting `easyMode := false` has not been tested, but it is squirrly.  The toolbar is a fairly complex and unforgiving control.  Disable easyMode at your own risk!
 
