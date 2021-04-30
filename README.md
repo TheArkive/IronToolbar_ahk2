@@ -1,10 +1,10 @@
 # IronToolbar for AHK
 
-<img src="images/preview.gif" />
+<img src="images/preview.gif">
 
 <details>
 <summary>Preview #2</summary>
-<img src="images/preview2.gif" />
+<img src="images/preview2.gif">
 </details>
 
 Why Iron?  Two reasons:
