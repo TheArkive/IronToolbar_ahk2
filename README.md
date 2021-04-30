@@ -1,6 +1,6 @@
 # IronToolbar for AHK
 
-<img src="images/preview.gif" />
+<img src="images/preview.gif">
 
 <details>
 <summary>Preview #2</summary>
