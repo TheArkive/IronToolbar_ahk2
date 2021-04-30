@@ -1,3 +1,10 @@
+|[IronToolbar Home](https://thearkive.github.io/IronToolbar_AHK/)|[Documentation](site/docs.html)| [Download](https://github.com/TheArkive/IronToolbar_AHK/archive/refs/heads/master.zip) | [Source](https://github.com/TheArkive/IronToolbar_AHK) | 
+|-----------------------------|-------|------|-----|
+
+-----------------------------------------------------------------------------------------------
+
+<div style="font-size:12px; position:fixed; right:70px; top:10px; background-color:#000C17; padding:12px; z-index:100; border:1px solid #00ACAF; ">&nbsp;&nbsp;Table of Contents&nbsp;&nbsp;</div>
+
 ## Creating the Toolbar
 
 Create the toolbar as follows:
@@ -140,7 +147,7 @@ Usage: `index := tb.GetBitmap(_in)`
 The returned index is the 1-based index of the corresponding image in the currently active ImageList.
 
 ### tb.GetMetrics()
-Usage: `obj := tb.GetMetrics(type:="external")
+Usage: `obj := tb.GetMetrics(type:="external")`
 
 * obj: {x, y}\
 The x value is the internal/external horizontal spacing.
