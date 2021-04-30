@@ -12,20 +12,20 @@ By default, toolbar style "MixedButtons" is automatically set.  This has no effe
 * EasyMode: Boolean, true by default.\
 Turning off Easy Mode disables all automatic toolbar and button styles.  Use with caution!  Use tb.SendMsg() to send your own messages to the toolbar.
 
-Toolbar Styles:
-
-[Toolbar Styles Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-control-and-button-styles)\
-AltDrag, CustomErase, Flat, List, RegisterDrop, ToolTips, Transparent, Wrapable
-
-[Window Styles Reference - also affects the toolbar - MS.docs](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-styles)\
-Border, TabStop, ThickFrame, Child (these styles are rarely used directly with toolbars)
-
-[Common Control Styles Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/common-control-styles)\
-Adjustable, Bottom, Left, Right, Top, NoDivider, NoMoveX, NoMoveY, NoParentAlign, NoResize, Vert
-
-[Toolbar ExStyles Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-extended-styles)\
-DoubleBuffer, DrawDDArrows, HideClippedButtons, MixedButtons\
-MultiColumn, Vertical (suggested to NOT use MultiColumn and Vertical)
+> Toolbar Styles:
+> 
+> [Toolbar Styles Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-control-and-button-styles)\
+> AltDrag, CustomErase, Flat, List, RegisterDrop, ToolTips, Transparent, Wrapable
+> 
+> [Window Styles Reference - also affects the toolbar - MS.docs](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-styles)\
+> Border, TabStop, ThickFrame, Child (these styles are rarely used directly with toolbars)
+> 
+> [Common Control Styles Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/common-control-styles)\
+> Adjustable, Bottom, Left, Right, Top, NoDivider, NoMoveX, NoMoveY, NoParentAlign, NoResize, Vert
+> 
+> [Toolbar ExStyles Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-extended-styles)\
+> DoubleBuffer, DrawDDArrows, HideClippedButtons, MixedButtons\
+> MultiColumn, Vertical (suggested to NOT use MultiColumn and Vertical)
 
 ## Methods
 
@@ -49,11 +49,11 @@ Specify `icon:-1` to make a text-only button (without an icon).
 * styles: A space separated list of styles and exStyles to apply.
 * states: A space separated list of states to apply.
 
-[Toolbar Button Styles Reference](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-control-and-button-styles)\
-AutoSize, Button, Check, CheckGroup, DropDown, Group, NoPrefix, Sep, ShowText, WholeDropDown
-
-[Toolbar Button States Reference](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-button-states)\
-Checked, Ellipses, Enabled, Hidden, Marked, Pressed, Wrap, Grayed
+> [Toolbar Button Styles Reference](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-control-and-button-styles)\
+> AutoSize, Button, Check, CheckGroup, DropDown, Group, NoPrefix, Sep, ShowText, WholeDropDown
+>
+> [Toolbar Button States Reference](https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-button-states)\
+> Checked, Ellipses, Enabled, Hidden, Marked, Pressed, Wrap, Grayed
 
 ### tb.AutoSize()
 Usage: `tb.AutoSize()`
@@ -121,7 +121,7 @@ Usage: `map := tb.Export()`
 
 Exports the current layout of the buttons to a Map() object.  States and styles are also preserved.  The output map is meant to be used with an object serializer in order to save it to disk.
 
-Recommended serializer: [JSON](https://www.autohotkey.com/boards/viewtopic.php?f=83&t=74799&sid=3c11c9a47a6500664963402ec9ccb082)
+> Recommended serializer: [JSON](https://www.autohotkey.com/boards/viewtopic.php?f=83&t=74799&sid=3c11c9a47a6500664963402ec9ccb082)
 
 ### tb.GetAllButtons()
 Usage: `btn_array := tb.GetAllButtons()`
@@ -196,7 +196,7 @@ Usage: `tb.Import(map)`
 
 Imports the specified layout of the buttons.  States and styles are also preserved.  The input map is meant to be first loaded from a text file with an object serializer.
 
-Recommended serializer: [JSON](https://www.autohotkey.com/boards/viewtopic.php?f=83&t=74799&sid=3c11c9a47a6500664963402ec9ccb082)
+> Recommended serializer: [JSON](https://www.autohotkey.com/boards/viewtopic.php?f=83&t=74799&sid=3c11c9a47a6500664963402ec9ccb082)
 
 ### tb.Insert()
 Usage: `tb.Insert(btn_obj, index)`
@@ -302,15 +302,16 @@ tbEvent(tb, lParam, dataObj) {
 dataObj Properties:
 
 ```
-d props: { event:str, eventInt:int                      Event info
-         , index:int, idCmd:int, label:str              Button ID info
-         , dims:{x,y,h,w,b}                             X/Y are relative to the toolbar, b is the same as y+h
-         , hoverFlags:str, hoverFlagsInt:int            Hover info
-         , vKey:int, char:int                           Keypress info
-         , oldIndex:int, oldIdCmd:int, oldLabel:str }   More hover info for button the mouse WAS hovering over.
+dtaObj := { event:str, eventInt:int                      Event info
+          , index:int, idCmd:int, label:str              Button ID info
+          , dims:{x,y,h,w,b}                             X/Y are relative to the toolbar, b is the same as y+h
+          , hoverFlags:str, hoverFlagsInt:int            Hover info
+          , vKey:int, char:int                           Keypress info
+          , oldIndex:int, oldIdCmd:int, oldLabel:str }   More hover info for button the mouse WAS hovering over.
 ```
 
-[Toolbar WM_NOTIFY Events Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-notifications)\
+> [Toolbar WM_NOTIFY Events Reference - MS.docs](https://docs.microsoft.com/en-us/windows/win32/controls/bumper-toolbar-control-reference-notifications)
+
 dataObj Events:
 
 ```
