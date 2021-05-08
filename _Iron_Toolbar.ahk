@@ -203,7 +203,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     Add(btnArray, initial:=true) {
         btnArray := Toolbar.AddConvert(this,btnArray,initial)
         
-        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size * btnArray.Length, 0)
+        TBBUTTON := Buffer(Toolbar.TBBUTTON_size * btnArray.Length, 0)
         offset := 0
         
         For i, b in btnArray ; add buttons
@@ -328,7 +328,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     }
     
     GetMetrics(typ:="external") {
-        METRICS := BufferAlloc(bSize:=32,0)
+        METRICS := Buffer(bSize:=32,0)
         NumPut("UInt",bSize,"UInt",5,METRICS)
         this.SendMsg(Toolbar.messages.GetMetrics,0,METRICS.ptr)
         ext := {x:NumGet(METRICS,8,"Int"), y:NumGet(METRICS,12,"Int")}
@@ -349,7 +349,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     }
     
     HitTest() {
-        POINT := BufferAlloc(8,0)
+        POINT := Buffer(8,0)
         old_mode := A_CoordModeMouse
         CoordMode "Mouse", "Client"
         MouseGetPos &x, &y
@@ -406,7 +406,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     
     Insert(b,idx) {
         a := Toolbar.AddConvert(this, b, true), b := a[1]
-        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size, 0)
+        TBBUTTON := Buffer(Toolbar.TBBUTTON_size, 0)
         Toolbar.Fill_TBBUTTON(this,TBBUTTON, offset:=0, b.label, b.icon, b.idCmd, b.states, b.styles, b.iString)
         this.SendMsg(Toolbar.messages.InsertButton, idx-1, TBBUTTON.ptr)
     }
@@ -529,7 +529,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     }
     
     SetMetrics(x, y, typ:="external") {
-        METRICS := BufferAlloc(bSize:=32,0)
+        METRICS := Buffer(bSize:=32,0)
         flags := (typ="external") ? 4 : 1
         NumPut("UInt",bSize,"UInt",flags,METRICS)
         
@@ -624,7 +624,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
         Static encoding := !StrLen(Chr(0xFFFF)) ? "UTF-8" : "UTF-16"
         
         If (iString = -1) { ; create string and add to pool
-            BTNSTR := BufferAlloc(StrPut(label,encoding), 0)
+            BTNSTR := Buffer(StrPut(label,encoding), 0)
             StrPut(label, BTNSTR.ptr, encoding)
             iString := ctl.SendMsg(this.messages.AddString, 0, BTNSTR.ptr)
         }
@@ -637,7 +637,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     }
     
     Static GetButton(ctl, idx) { ; btn props: index, label, icon, states, styles, checked, idCmd, iString
-        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0)
+        TBBUTTON := Buffer(Toolbar.TBBUTTON_size,0)
         r := ctl.SendMsg(this.messages.GetButton,idx-1,TBBUTTON.ptr)
         iImg := NumGet(TBBUTTON,"Int")
         idCmd := NumGet(TBBUTTON,4,"UInt")
@@ -650,7 +650,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     }
     
     ; GetButtonInfo(idx, byIndex:=false) { ; need to turn this into SetButtonText()
-        ; TBI := BufferAlloc(bSize:=(A_PtrSize=4)?32:48,0)
+        ; TBI := Buffer(bSize:=(A_PtrSize=4)?32:48,0)
         ; dwMask := this.Command|this.Image|this.Size|this.State|this.Style
         ; (byIndex) ? (dwMask := dwMask | this.ByIndex) : ""
         
@@ -660,10 +660,10 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
         ; states := NumGet(TBI, 16, "UChar"), styles := NumGet(TBI, 17, "UChar"), width  := NumGet(TBI, 18, "UShort")
         
         ; tSize := this.SendMsg(this._GetButtonText, idCmd, 0)
-        ; tBuf := BufferAlloc((tSize+1) * (StrLen(Chr(0xFFFF))?2:1),0)
+        ; tBuf := Buffer((tSize+1) * (StrLen(Chr(0xFFFF))?2:1),0)
         ; this.SendMsg(this._GetButtonText, idCmd, tBuf.Ptr), txt := StrGet(tBuf)
         
-        ; TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0)
+        ; TBBUTTON := Buffer(Toolbar.TBBUTTON_size,0)
         ; r := this.SendMsg(this._GetButton,idx,TBBUTTON.ptr)
         ; iString := NumGet(TBBUTTON,((A_PtrSize=4)?16:24),"Ptr")
         
@@ -673,9 +673,9 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     Static GetButtonDims(ctl) {
         btns := this.SaveNewLayout(ctl)
         
-        _RECT := BufferAlloc(16,0), bWidth := 0, bHeight := 0
+        _RECT := Buffer(16,0), bWidth := 0, bHeight := 0
         For i, b in btns {
-            TBI := BufferAlloc(bSize:=(A_PtrSize=4)?32:48,0)
+            TBI := Buffer(bSize:=(A_PtrSize=4)?32:48,0)
             dwMask := this.flags.Style
             NumPut "UInt", bSize, "Int", dwMask, TBI
             ctl.SendMsg(this.messages.GetButtonInfo, b.idCmd, TBI.ptr)
@@ -695,7 +695,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
     }
     
     Static GetButtonText(ctl, idx) {
-        TBBUTTON := BufferAlloc(Toolbar.TBBUTTON_size,0)
+        TBBUTTON := Buffer(Toolbar.TBBUTTON_size,0)
         r := ctl.SendMsg(this.messages.GetButton,idx-1,TBBUTTON.ptr)
         idCmd := NumGet(TBBUTTON,4,"UInt")
         
@@ -704,7 +704,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
         If (tSize = -1)
             return ""
         
-        TBBUTTON := "", tBuf := BufferAlloc((tSize+1) * (StrLen(Chr(0xFFFF)) ? 2 : 1),0)
+        TBBUTTON := "", tBuf := Buffer((tSize+1) * (StrLen(Chr(0xFFFF)) ? 2 : 1),0)
         ctl.SendMsg(this.messages.GetButtonText, idCmd, tBuf.Ptr), txt := StrGet(tBuf)
         return txt
     }
@@ -871,7 +871,7 @@ class Toolbar extends Gui.Custom { ; extends Toolbar.Private {
         }
         
         If (o.idCmd) {
-            Static RECT := BufferAlloc(16,0)
+            Static RECT := Buffer(16,0)
             r := ctl.SendMsg(this.messages.GetRect, b.idCmd, RECT.ptr)
             L := NumGet(RECT,"Int"), T := NumGet(RECT,4,"Int"), R := NumGet(RECT,8,"Int"), B := NumGet(RECT,12,"Int")
             o.dims := {x:L, y:T, b:B, w:(R-L), h:(B-T)}
